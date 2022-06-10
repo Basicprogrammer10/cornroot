@@ -1,0 +1,7 @@
+name: Cornroot Music
+version: '${version}'
+main: com.connorcode.cornroot.Cornroot
+api-version: 1.16
+authors: [ ConnorSlade ]
+description: A music system
+website: https://connorcode.com
