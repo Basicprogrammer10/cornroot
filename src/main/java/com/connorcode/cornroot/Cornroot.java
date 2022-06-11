@@ -1,6 +1,7 @@
 package com.connorcode.cornroot;
 
 import com.connorcode.cornroot.events.PlayerInteract;
+import com.connorcode.cornroot.misc.Database;
 import org.bukkit.Location;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -10,12 +11,14 @@ import java.util.List;
 
 public final class Cornroot extends JavaPlugin {
     File config = new File(getDataFolder() + File.separator + "config.yml");
+    public static Database database;
     public static List<Location> jukeboxes = new ArrayList<>();
 
     @Override
     public void onEnable() {
-        // Init config file
+        // Init config file and database
         if (!config.exists()) saveDefaultConfig();
+        database = new Database("data.db");
 
         // Load jukebox positions
         List<String> rawJukeboxes = getConfig().getStringList("jukeboxes");
@@ -30,7 +33,5 @@ public final class Cornroot extends JavaPlugin {
     }
 
     @Override
-    public void onDisable() {
-        // Plugin shutdown logic
-    }
+    public void onDisable() { }
 }

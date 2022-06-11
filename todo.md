@@ -1,14 +1,14 @@
 # TO-DO
 
-On click of Jukebox open song selector GUI with abunch of song options.
+On click of Jukebox open song selector GUI with a bunch of song options.
 On global music play it is added to the queue.
 
-- [ ] Config Loading
-  - [ ] Jukebox Positions 
-- [ ] Jukebox Click Detection
+- [X] Config Loading
+  - [X] Jukebox Positions 
+- [X] Jukebox Click Detection
 - [ ] Music Loading  
 - [ ] Song data loading
 - [ ] Permission System
-  - [ ] Database 
+  - [X] Database 
   - [ ] Commands 
 - [ ] Queue
