@@ -6,19 +6,17 @@ import org.bukkit.Location;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 
 public final class Cornroot extends JavaPlugin {
-    File config = new File(getDataFolder() + File.separator + "config.yml");
-    File songFolder = new File(getDataFolder() + File.separator + "songs");
     public static Database database;
     public static List<Location> jukeboxes = new ArrayList<>();
     public static List<Song> songs = new ArrayList<>();
+    File config = new File(getDataFolder() + File.separator + "config.yml");
+    File songFolder = new File(getDataFolder() + File.separator + "songs");
 
     @Override
     public void onEnable() {
@@ -36,10 +34,14 @@ public final class Cornroot extends JavaPlugin {
         }
 
         // Load songs
-        for (File i: Objects.requireNonNull(songFolder.listFiles())) {
-            if (!i.isFile() || !i.getName().endsWith(".nbs")) continue;
+        for (File i : Objects.requireNonNull(songFolder.listFiles())) {
+            if (!i.isFile() || !i.getName()
+                    .endsWith(".nbs")) continue;
             getLogger().log(Level.INFO, String.format("Loading song `%s`", i.getName()));
             try {
+                songs.add(new Song(i));
+                songs.add(new Song(i));
+                songs.add(new Song(i));
                 songs.add(new Song(i));
             } catch (Exception e) {
                 e.printStackTrace();
@@ -47,9 +49,11 @@ public final class Cornroot extends JavaPlugin {
         }
 
         // Init Event Handlers
-        getServer().getPluginManager().registerEvents(new PlayerInteract(), this);
+        getServer().getPluginManager()
+                .registerEvents(new PlayerInteract(), this);
     }
 
     @Override
-    public void onDisable() { }
+    public void onDisable() {
+    }
 }

@@ -7,10 +7,10 @@ import java.nio.file.Files;
 import java.util.Arrays;
 
 public class Song {
-    String name;
-    String author;
-    float tempo;
-    short length;
+    public String name;
+    public String author;
+    public float tempo;
+    public short length;
 
     Song(File file) throws Exception {
         byte[] bytes = Files.readAllBytes(file.toPath());

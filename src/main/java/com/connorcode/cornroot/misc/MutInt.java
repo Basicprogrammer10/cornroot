@@ -7,5 +7,7 @@ public class MutInt {
         this.value = value;
     }
 
-    public int increment(int i) {value+=i;return value;}
+    public void increment(int i) {
+        value += i;
+    }
 }
