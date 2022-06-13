@@ -4,7 +4,6 @@ import com.connorcode.cornroot.Cornroot;
 import com.connorcode.cornroot.Song;
 import com.connorcode.cornroot.misc.Util;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -32,7 +31,8 @@ import static org.bukkit.Bukkit.getServer;
 public class PlayerInteract implements Listener {
     HashMap<UUID, Inventory> inventory = new HashMap<>();
     Material[] musicDisks = new Material[]{Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS, Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD, Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,};
-    NamespacedKey next = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "next");
+    NamespacedKey nextKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "next");
+    NamespacedKey idKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "id");
 
     @EventHandler
     void PlayerJukeboxInteractEvent(PlayerInteractEvent e) {
@@ -61,10 +61,9 @@ public class PlayerInteract implements Listener {
         Inventory inv = inventory.get(uuid);
         try {
             if (e.getSlot() == 14 || e.getSlot() == 12) {
-                Integer storageContent = Objects.requireNonNull(
-                        inv.getStorageContents()[e.getSlot()].getItemMeta()
-                                .getPersistentDataContainer()
-                                .get(next, PersistentDataType.INTEGER));
+                Integer storageContent = Objects.requireNonNull(inv.getStorageContents()[e.getSlot()].getItemMeta()
+                        .getPersistentDataContainer()
+                        .get(nextKey, PersistentDataType.INTEGER));
                 updateInventory(inv, storageContent);
                 return;
             }
@@ -74,10 +73,9 @@ public class PlayerInteract implements Listener {
 
         // Get music id (if any)
         try {
-            int id = Integer.parseInt(((TextComponent) Objects.requireNonNull(Objects.requireNonNull(e.getCurrentItem())
-                            .lore())
-                    .get(1)).content()
-                    .split(":")[1].trim());
+            int id = Objects.requireNonNull(inv.getStorageContents()[e.getSlot()].getItemMeta()
+                    .getPersistentDataContainer()
+                    .get(idKey, PersistentDataType.INTEGER));
 
             // Increment stats
             try {
@@ -102,8 +100,10 @@ public class PlayerInteract implements Listener {
 
     @EventHandler
     void PlayerInventoryCloseEvent(InventoryCloseEvent e) {
-        if (!inventory.containsKey(e.getPlayer().getUniqueId())) return;
-        inventory.remove(e.getPlayer().getUniqueId());
+        if (!inventory.containsKey(e.getPlayer()
+                .getUniqueId())) return;
+        inventory.remove(e.getPlayer()
+                .getUniqueId());
     }
 
     void updateInventory(Inventory inv, int page) {
@@ -135,11 +135,10 @@ public class PlayerInteract implements Listener {
             Song song = Cornroot.songs.get(realIndex);
 
             inv.setItem(i, Util.cleanItemStack(musicDisks[new Random(i).nextInt(musicDisks.length)], 1, m -> {
-                ArrayList<Component> components = new ArrayList<>();
-                components.add(
-                        Component.text(String.format("Artist: %s", song.author), TextColor.color(255, 255, 255)));
-                components.add(Component.text(String.format("ID: %d", realIndex), TextColor.color(255, 255, 255)));
-                m.lore(components);
+                m.lore(Collections.singletonList(
+                        Component.text(String.format("Artist: %s", song.author), TextColor.color(255, 255, 255))));
+                m.getPersistentDataContainer()
+                        .set(idKey, PersistentDataType.INTEGER, realIndex);
                 m.displayName(Component.text(song.name));
             }));
         }
@@ -159,7 +158,7 @@ public class PlayerInteract implements Listener {
             m.displayName(Component.text("Previous Page"));
             if (page <= 0) return;
             m.getPersistentDataContainer()
-                    .set(next, PersistentDataType.INTEGER, page - 1);
+                    .set(nextKey, PersistentDataType.INTEGER, page - 1);
             m.addEnchant(Enchantment.DURABILITY, 1, false);
             m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }));
@@ -168,9 +167,13 @@ public class PlayerInteract implements Listener {
             m.displayName(Component.text("Next Page"));
             if (Cornroot.songs.size() < (page + 1) * 9) return;
             m.getPersistentDataContainer()
-                    .set(next, PersistentDataType.INTEGER, page + 1);
+                    .set(nextKey, PersistentDataType.INTEGER, page + 1);
             m.addEnchant(Enchantment.DURABILITY, 1, false);
             m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }));
+
+        // Add page number
+        inv.setItem(13, Util.cleanItemStack(Material.GRAY_STAINED_GLASS_PANE, 1,
+                m -> m.displayName(Component.text(String.format("%d/%d", page + 1, Cornroot.songs.size() / 9 + 1)))));
     }
 }

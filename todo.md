@@ -6,8 +6,9 @@ On global music play it is added to the queue.
 - [X] Config Loading
   - [X] Jukebox Positions 
 - [X] Jukebox Click Detection
+- [X] Song Pages 
 - [ ] Music Loading  
-- [ ] Song data loading
+- [X] Song data loading
 - [ ] Permission System
   - [X] Database 
   - [ ] Commands 

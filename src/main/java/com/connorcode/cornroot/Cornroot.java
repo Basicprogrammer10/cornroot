@@ -40,9 +40,6 @@ public final class Cornroot extends JavaPlugin {
             getLogger().log(Level.INFO, String.format("Loading song `%s`", i.getName()));
             try {
                 songs.add(new Song(i));
-                songs.add(new Song(i));
-                songs.add(new Song(i));
-                songs.add(new Song(i));
             } catch (Exception e) {
                 e.printStackTrace();
             }
