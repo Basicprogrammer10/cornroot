@@ -1,5 +1,8 @@
 package com.connorcode.cornroot;
 
+import com.connorcode.cornroot.commands.GlobalKeyAdd;
+import com.connorcode.cornroot.commands.GlobalKeyCompletor;
+import com.connorcode.cornroot.commands.GlobalKeyRemove;
 import com.connorcode.cornroot.events.PlayerInteract;
 import com.connorcode.cornroot.misc.Database;
 import org.bukkit.Location;
@@ -48,6 +51,17 @@ public final class Cornroot extends JavaPlugin {
         // Init Event Handlers
         getServer().getPluginManager()
                 .registerEvents(new PlayerInteract(), this);
+
+        // Init Commands
+        Objects.requireNonNull(getServer().getPluginCommand("globalkeyadd"))
+                .setExecutor(new GlobalKeyAdd());
+        Objects.requireNonNull(getServer().getPluginCommand("globalkeyadd"))
+                .setTabCompleter(new GlobalKeyCompletor());
+
+        Objects.requireNonNull(getServer().getPluginCommand("globalkeyremove"))
+                .setExecutor(new GlobalKeyRemove());
+        Objects.requireNonNull(getServer().getPluginCommand("globalkeyremove"))
+                .setTabCompleter(new GlobalKeyCompletor());
     }
 
     @Override

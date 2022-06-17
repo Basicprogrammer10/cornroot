@@ -13,11 +13,11 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.UUID;
 
-public class GlobalKeyAdd implements CommandExecutor {
+public class GlobalKeyRemove implements CommandExecutor {
     @Override
-    public boolean onCommand(CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!sender.isOp()) {
-            sender.sendMessage(Component.text("[Cornroot] You are not OP (:o)"));
+            sender.sendMessage(Component.text("[Cornroot] You are not OP"));
             return true;
         }
 
@@ -26,8 +26,8 @@ public class GlobalKeyAdd implements CommandExecutor {
             return true;
         }
 
-        UUID uuid;
         @NotNull OfflinePlayer player;
+        UUID uuid;
         try {
             uuid = UUID.fromString(args[0]);
             player = Bukkit.getOfflinePlayer(uuid);
@@ -37,14 +37,13 @@ public class GlobalKeyAdd implements CommandExecutor {
         }
 
         try {
-            PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
-                    "INSERT OR IGNORE INTO users (uuid, perms, date) VALUES (?, 1, strftime())");
+            PreparedStatement stmt = Cornroot.database.connection.prepareStatement("DELETE FROM users WHERE uuid = ?");
             stmt.setString(1, uuid.toString());
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        sender.sendMessage(Component.text(String.format("[Cornroot] Added player `%s`", player.getName())));
+        sender.sendMessage(Component.text(String.format("[Cornroot] Removed user `%s`", player.getName())));
         return true;
     }
 }

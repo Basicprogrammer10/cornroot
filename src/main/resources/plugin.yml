@@ -5,3 +5,10 @@ api-version: 1.16
 authors: [ ConnorSlade ]
 description: A music system
 website: https://connorcode.com
+commands:
+  globalkeyadd:
+    description: Give player access to playing global music
+    usage: globalkeyadd <UUID>
+  globalkeyremove:
+    description: Remove player access to playing global music
+    usage: globalkeyremove <UUID>
