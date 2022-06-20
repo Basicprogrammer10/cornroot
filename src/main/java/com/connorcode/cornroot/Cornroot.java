@@ -2,6 +2,7 @@ package com.connorcode.cornroot;
 
 import com.connorcode.cornroot.commands.GlobalKeyAdd;
 import com.connorcode.cornroot.commands.GlobalKeyCompletor;
+import com.connorcode.cornroot.commands.GlobalKeyList;
 import com.connorcode.cornroot.commands.GlobalKeyRemove;
 import com.connorcode.cornroot.events.PlayerInteract;
 import com.connorcode.cornroot.misc.Database;
@@ -44,6 +45,7 @@ public final class Cornroot extends JavaPlugin {
             try {
                 songs.add(new Song(i));
             } catch (Exception e) {
+                getLogger().log(Level.INFO, String.format("Error loading `%s`:", i.getName()));
                 e.printStackTrace();
             }
         }
@@ -62,6 +64,9 @@ public final class Cornroot extends JavaPlugin {
                 .setExecutor(new GlobalKeyRemove());
         Objects.requireNonNull(getServer().getPluginCommand("globalkeyremove"))
                 .setTabCompleter(new GlobalKeyCompletor());
+
+        Objects.requireNonNull(getServer().getPluginCommand("globalkeylist"))
+                .setExecutor(new GlobalKeyList());
     }
 
     @Override

@@ -11,5 +11,5 @@ On global music play it is added to the queue.
 - [X] Song data loading
 - [ ] Permission System
   - [X] Database 
-  - [ ] Commands 
+  - [X] Commands 
 - [ ] Queue

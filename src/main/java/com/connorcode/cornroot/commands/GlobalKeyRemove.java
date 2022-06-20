@@ -37,7 +37,7 @@ public class GlobalKeyRemove implements CommandExecutor {
         }
 
         try {
-            PreparedStatement stmt = Cornroot.database.connection.prepareStatement("DELETE FROM users WHERE uuid = ?");
+            PreparedStatement stmt = Cornroot.database.connection.prepareStatement("DELETE FROM users WHERE uuid = ?1");
             stmt.setString(1, uuid.toString());
         } catch (SQLException e) {
             e.printStackTrace();

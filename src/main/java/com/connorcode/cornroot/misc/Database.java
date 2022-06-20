@@ -25,7 +25,7 @@ public class Database {
             stmt.executeUpdate("PRAGMA journal_mode = WAL");
 
             stmt.executeUpdate(
-                    "CREATE TABLE IF NOT EXISTS users (uuid BLOB NOT NULL, perms INTEGER NOT NULL, date INTEGER NOT NULL, UNIQUE(uuid))");
+                    "CREATE TABLE IF NOT EXISTS users (uuid TEXT NOT NULL, perms INTEGER NOT NULL, date INTEGER NOT NULL, UNIQUE(uuid))");
             stmt.executeUpdate(
                     "CREATE TABLE IF NOT EXISTS storage (id INTEGER PRIMARY KEY CHECK (id = 0), totalPlays INTEGER NOT NULL, globalPlays  INTEGER NOT NULL)");
             stmt.executeUpdate(

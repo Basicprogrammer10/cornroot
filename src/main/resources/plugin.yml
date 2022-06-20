@@ -12,3 +12,6 @@ commands:
   globalkeyremove:
     description: Remove player access to playing global music
     usage: globalkeyremove <UUID>
+  globalkeylist:
+    description: List player with global music perms
+    usage: globalkeylist
