@@ -95,19 +95,17 @@ public class PlayerInteract implements Listener {
                 int lastTick = 0;
                 for (Song.Note i: song.notes) {
                     try {
-                        Thread.sleep((long) ((float) (i.tick - lastTick) / 0.01 / song.tempo));
+                        if (i.tick - lastTick != 0) Thread.sleep((long) ((float) (i.tick - lastTick) / (song.tempo / 1000)));
                         lastTick = i.tick;
                     } catch (InterruptedException ex) {
                         ex.printStackTrace();
                     }
                     for (Player p: getServer().getOnlinePlayers()) {
-                        p.playSound(p.getLocation(), i.getSound(), 1.0F, i.getPitch());
+                        p.playSound(p.getEyeLocation(), i.getSound(), 1.0F, i.getPitch());
                     }
                 }
             });
-//            return;
         } catch (NumberFormatException | NullPointerException ignored) {
-//            return;
         }
     }
 

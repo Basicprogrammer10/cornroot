@@ -52,7 +52,7 @@ public class Song {
 
             while (true) {
                 short layerJumpTicks = readShort(i, bytes);
-                value += layerJumpTicks;
+//                value += layerJumpTicks;
                 if (layerJumpTicks == 0) break;
 
                 Instrument instrument = readInstrument(i, bytes).orElse(Instrument.Piano);

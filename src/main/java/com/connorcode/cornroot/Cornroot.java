@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public final class Cornroot extends JavaPlugin {
     public static Database database;
@@ -50,7 +51,7 @@ public final class Cornroot extends JavaPlugin {
                 e.printStackTrace();
             }
         }
-        System.out.println(songs.get(0).notes);
+        System.out.println(songs.get(0).notes.stream().map(s -> String.format("%s\n", s)).collect(Collectors.joining()));
 
         // Init Event Handlers
         getServer().getPluginManager()
