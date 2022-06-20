@@ -6,12 +6,12 @@ import com.connorcode.cornroot.commands.GlobalKeyList;
 import com.connorcode.cornroot.commands.GlobalKeyRemove;
 import com.connorcode.cornroot.events.PlayerInteract;
 import com.connorcode.cornroot.misc.Database;
-import com.connorcode.cornroot.misc.Util;
 import org.bukkit.Location;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
@@ -50,6 +50,7 @@ public final class Cornroot extends JavaPlugin {
                 e.printStackTrace();
             }
         }
+        System.out.println(songs.get(0).notes);
 
         // Init Event Handlers
         getServer().getPluginManager()

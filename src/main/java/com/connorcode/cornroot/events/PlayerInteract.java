@@ -5,6 +5,7 @@ import com.connorcode.cornroot.Song;
 import com.connorcode.cornroot.misc.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -21,6 +22,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -85,16 +87,27 @@ public class PlayerInteract implements Listener {
                 ex.printStackTrace();
             }
 
-            // TMP - Play chirp on client
-            if (id != 1) return;
-            ((Player) e.getWhoClicked()).playSound(e.getWhoClicked()
-                    .getLocation(), Sound.MUSIC_DISC_CHIRP.key()
-                    .asString(), 1f, 1f);
+            // Play song
+            Song song = Cornroot.songs.get(id);
             e.getWhoClicked()
-                    .sendActionBar(Component.text(String.format("Now Playing: %s", Cornroot.songs.get(id).name)));
-            return;
+                    .sendActionBar(Component.text(String.format("Now Playing: %s", song.name)));
+            Bukkit.getScheduler().runTaskAsynchronously(Cornroot.getPlugin(Cornroot.class), () -> {
+                int lastTick = 0;
+                for (Song.Note i: song.notes) {
+                    try {
+                        Thread.sleep((long) ((float) (i.tick - lastTick) / 0.01 / song.tempo));
+                        lastTick = i.tick;
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }
+                    for (Player p: getServer().getOnlinePlayers()) {
+                        p.playSound(p.getLocation(), i.getSound(), 1.0F, i.getPitch());
+                    }
+                }
+            });
+//            return;
         } catch (NumberFormatException | NullPointerException ignored) {
-            return;
+//            return;
         }
     }
 

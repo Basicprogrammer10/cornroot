@@ -1,6 +1,7 @@
 package com.connorcode.cornroot;
 
 import com.connorcode.cornroot.misc.MutInt;
+import org.bukkit.Sound;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -59,7 +60,7 @@ public class Song {
                 i.increment(2);
                 short pitch = readShort(i, bytes, true);
 
-                notes.add(new Note(noteJumpTicks, layerJumpTicks, instrument, key, pitch));
+                notes.add(new Note(value, instrument, key, pitch));
             }
         }
         this.notes = notes;
@@ -158,29 +159,63 @@ public class Song {
     }
 
     public static class Note {
-        public short noteJumpTicks;
-        public short layerJumpTicks;
+        public int tick;
         public Instrument instrument;
         public byte key;
         public short pitch;
 
-        Note(short noteJumpTicks, short layerJumpTicks, Instrument instrument, byte key, short pitch) {
-            this.noteJumpTicks = noteJumpTicks;
-            this.layerJumpTicks = layerJumpTicks;
+        Note(int tick, Instrument instrument, byte key, short pitch) {
+            this.tick = tick;
             this.instrument = instrument;
             this.key = key;
             this.pitch = pitch;
         }
 
+        public float getPitch() {
+            return (float) Math.pow(2, (-12 + this.key - 33) / 12f);
+        }
+
+        public Sound getSound() {
+            switch (instrument) {
+                case Piano:
+                    return Sound.BLOCK_NOTE_BLOCK_HARP;
+                case DoubleBass:
+                    return Sound.BLOCK_NOTE_BLOCK_BASS;
+                case BassDrum:
+                    return Sound.BLOCK_NOTE_BLOCK_BASEDRUM;
+                case SnareDrum:
+                    return Sound.BLOCK_NOTE_BLOCK_SNARE;
+                case Click:
+                    return Sound.BLOCK_NOTE_BLOCK_HAT;
+                case Guitar:
+                    return Sound.BLOCK_NOTE_BLOCK_GUITAR;
+                case Flute:
+                    return Sound.BLOCK_NOTE_BLOCK_FLUTE;
+                case Bell:
+                    return Sound.BLOCK_NOTE_BLOCK_BELL;
+                case Chime:
+                    return Sound.BLOCK_NOTE_BLOCK_CHIME;
+                case Xylophone:
+                    return Sound.BLOCK_NOTE_BLOCK_XYLOPHONE;
+                case IronXylophone:
+                    return Sound.BLOCK_NOTE_BLOCK_IRON_XYLOPHONE;
+                case CowBell:
+                    return Sound.BLOCK_NOTE_BLOCK_COW_BELL;
+                case Didgeridoo:
+                    return Sound.BLOCK_NOTE_BLOCK_DIDGERIDOO;
+                case Bit:
+                    return Sound.BLOCK_NOTE_BLOCK_BIT;
+                case Banjo:
+                    return Sound.BLOCK_NOTE_BLOCK_BANJO;
+                case Pling:
+                    return Sound.BLOCK_NOTE_BLOCK_PLING;
+            }
+            return null;
+        }
+
         @Override
         public String toString() {
-            return "Note{" +
-                    "noteJumpTicks=" + noteJumpTicks +
-                    ", layerJumpTicks=" + layerJumpTicks +
-                    ", instrument=" + instrument +
-                    ", key=" + key +
-                    ", pitch=" + pitch +
-                    '}';
+            return "Note{" + "tick=" + tick + ", instrument=" + instrument + ", key=" + key + ", pitch=" + pitch + '}';
         }
     }
 }
