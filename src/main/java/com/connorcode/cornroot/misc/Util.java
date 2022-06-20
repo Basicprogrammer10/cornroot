@@ -13,4 +13,10 @@ public class Util {
         item.setItemMeta(itemMeta);
         return item;
     }
+
+    public static String songLength(float secs) {
+        int min = (int) (secs / 60);
+        int sec = (int) (secs - (min * 60));
+        return String.format("%d:%02d", min, sec);
+    }
 }

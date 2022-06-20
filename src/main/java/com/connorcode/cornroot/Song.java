@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class Song {
     public String name;
@@ -26,39 +25,44 @@ public class Song {
         assert readShort(i, bytes) == 0;
 
         // Get song length
-        i.increment(2);
+        i.increment(4);
         this.length = readShort(i, bytes);
 
         // Get song name
-        i.increment(4);
+        i.increment(2);
         this.name = readString(i, bytes);
         this.author = readString(i, bytes);
 
         // Get tempo
         skipStrings(i, bytes, 2);
-        this.tempo = readShort(i, bytes) / 10f;
+        this.tempo = readShort(i, bytes) / 100f;
+
+        i.increment(23);
+        skipStrings(i, bytes, 1);
+        i.increment(4);
 
         // Read notes
         ArrayList<Note> notes = new ArrayList<>();
+        int value = -1;
         while (true) {
             short noteJumpTicks = readShort(i, bytes);
+            value += noteJumpTicks;
             if (noteJumpTicks == 0) break;
 
-            short layerJumpTicks = readShort(i, bytes);
-            if (layerJumpTicks == 0) continue;
+            while (true) {
+                short layerJumpTicks = readShort(i, bytes);
+                value += layerJumpTicks;
+                if (layerJumpTicks == 0) break;
 
-            Instrument instrument = readInstrument(i, bytes).orElse(Instrument.Piano);
-            byte key = readByte(i, bytes);
-            i.increment(1);
-            short pitch = readShort(i, bytes, true);
+                Instrument instrument = readInstrument(i, bytes).orElse(Instrument.Piano);
+                byte key = readByte(i, bytes);
+                i.increment(2);
+                short pitch = readShort(i, bytes, true);
 
-            notes.add(new Note(noteJumpTicks, layerJumpTicks, instrument, key, pitch));
+                notes.add(new Note(noteJumpTicks, layerJumpTicks, instrument, key, pitch));
+            }
         }
         this.notes = notes;
-        System.out.println(notes.size());
-        System.out.println(notes.stream()
-                .map(Note::toString)
-                .collect(Collectors.joining("\n")));
     }
 
     static byte readByte(MutInt i, byte[] data) {
@@ -143,6 +147,10 @@ public class Song {
                 return Optional.of(Instrument.Pling);
         }
         return Optional.empty();
+    }
+
+    public float secLength() {
+        return this.length / this.tempo;
     }
 
     public enum Instrument {

@@ -135,8 +135,12 @@ public class PlayerInteract implements Listener {
             Song song = Cornroot.songs.get(realIndex);
 
             inv.setItem(i, Util.cleanItemStack(musicDisks[new Random(i).nextInt(musicDisks.length)], 1, m -> {
-                m.lore(Collections.singletonList(
-                        Component.text(String.format("Artist: %s", song.author), TextColor.color(255, 255, 255))));
+                ArrayList<Component> components = new ArrayList<>();
+                components.add(
+                        Component.text(String.format("Artist: %s", song.author), TextColor.color(255, 255, 255)));
+                components.add(Component.text(String.format("Length: %s", Util.songLength(song.secLength())),
+                        TextColor.color(255, 255, 255)));
+                m.lore(components);
                 m.getPersistentDataContainer()
                         .set(idKey, PersistentDataType.INTEGER, realIndex);
                 m.displayName(Component.text(song.name));
