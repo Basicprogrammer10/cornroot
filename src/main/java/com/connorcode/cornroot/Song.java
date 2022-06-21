@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -167,6 +168,12 @@ public class Song {
                                     Cornroot.database.connection.prepareStatement(
                                                     "UPDATE storage SET totalPlays = totalPlays + 1, globalPlays = globalPlays + 1")
                                             .executeUpdate();
+
+                                    PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
+                                            "INSERT INTO plays (trackName, player, global) VALUES (?1, ?2, 1)");
+                                    stmt.setString(1, Cornroot.songs.get(Cornroot.nowPlaying.songIndex).name);
+                                    stmt.setString(2, String.valueOf(Cornroot.nowPlaying.player.getUniqueId()));
+                                    stmt.executeUpdate();
                                 } catch (SQLException ex) {
                                     ex.printStackTrace();
                                 }
@@ -174,6 +181,8 @@ public class Song {
                                 // Update jukebox inventorys
                                 PlayerInteract.inventory.values()
                                         .forEach(PlayerInteract.JukeboxInventory::updateQueueInfo);
+                                PlayerInteract.inventory.values()
+                                        .forEach(PlayerInteract.JukeboxInventory::updateUserInfo);
                             });
 
                     int lastTick = 0;

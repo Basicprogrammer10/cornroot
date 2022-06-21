@@ -111,8 +111,8 @@ public class PlayerInteract implements Listener {
                 if (!res.next() || res.getInt(1) < 1) {
                     inv.showInventoryToast("You dont have any global music keys", m -> m.lore(Collections.singletonList(
                             Component.join(Component.text(" "), Component.text("Purchase a global music key at"),
-                                    Component.text(Config.purchaseLink, Style.style(TextColor.color(0, 170, 170),
-                                            TextDecoration.UNDERLINED))))));
+                                    Component.text(Config.purchaseLink,
+                                            Style.style(TextColor.color(0, 170, 170), TextDecoration.UNDERLINED))))));
                     return;
                 }
 
@@ -249,39 +249,7 @@ public class PlayerInteract implements Listener {
             }));
 
             // Add user info
-            int keys = 0;
-            int plays = 0;
-            try {
-                PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
-                        "SELECT keys FROM users WHERE uuid = ?1");
-                PreparedStatement stmt2 = Cornroot.database.connection.prepareStatement(
-                        "SELECT COUNT(*) FROM plays WHERE player = ?1");
-
-                stmt.setString(1, String.valueOf(player.getUniqueId()));
-                stmt2.setString(1, String.valueOf(player.getUniqueId()));
-
-                keys = stmt.executeQuery()
-                        .getInt(1);
-                plays = stmt2.executeQuery()
-                        .getInt(1);
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
-            int finalKeys = keys;
-            int finalPlays = plays;
-            inv.setItem(9, Util.cleanItemStack(Material.PLAYER_HEAD, 1, m -> {
-                m.displayName(Component.text("User Info"));
-                ((SkullMeta) m).setOwningPlayer(player);
-
-                List<Component> lore = new ArrayList<>();
-                if (Util.bypassKeyCheck(player))
-                    lore.add(Component.text("*Key bypass*", TextColor.color(255, 255, 255)));
-                lore.add(Component.text(String.format("Name: %s", player.getName()), TextColor.color(255, 255, 255)));
-                lore.add(Component.text(String.format("Keys: %d", finalKeys), TextColor.color(255, 255, 255)));
-                lore.add(Component.text(String.format("Plays: %d", finalPlays), TextColor.color(255, 255, 255)));
-                m.lore(lore);
-            }));
+            this.updateUserInfo();
 
             // Add mute button
             if (mute) inv.setItem(10, Util.cleanItemStack(Material.BARRIER, 1, m -> {
@@ -358,6 +326,44 @@ public class PlayerInteract implements Listener {
                             TextColor.color(255, 255, 255)));
                 }
                 m.lore(components);
+            }));
+        }
+
+        public void updateUserInfo() {
+            if (pageType != PageType.Home) return;
+
+            int keys = 0;
+            int plays = 0;
+            try {
+                PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
+                        "SELECT keys FROM users WHERE uuid = ?1");
+                PreparedStatement stmt2 = Cornroot.database.connection.prepareStatement(
+                        "SELECT COUNT(*) FROM plays WHERE player = ?1");
+
+                stmt.setString(1, String.valueOf(player.getUniqueId()));
+                stmt2.setString(1, String.valueOf(player.getUniqueId()));
+
+                keys = stmt.executeQuery()
+                        .getInt(1);
+                plays = stmt2.executeQuery()
+                        .getInt(1);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            int finalKeys = keys;
+            int finalPlays = plays;
+            inv.setItem(9, Util.cleanItemStack(Material.PLAYER_HEAD, 1, m -> {
+                m.displayName(Component.text("User Info"));
+                ((SkullMeta) m).setOwningPlayer(player);
+
+                List<Component> lore = new ArrayList<>();
+                if (Util.bypassKeyCheck(player))
+                    lore.add(Component.text("*Key bypass*", TextColor.color(255, 255, 255)));
+                lore.add(Component.text(String.format("Name: %s", player.getName()), TextColor.color(255, 255, 255)));
+                lore.add(Component.text(String.format("Keys: %d", finalKeys), TextColor.color(255, 255, 255)));
+                lore.add(Component.text(String.format("Plays: %d", finalPlays), TextColor.color(255, 255, 255)));
+                m.lore(lore);
             }));
         }
     }
