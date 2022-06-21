@@ -1,7 +1,9 @@
 package com.connorcode.cornroot;
 
 import com.connorcode.cornroot.misc.MutInt;
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -9,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+
+import static org.bukkit.Bukkit.getServer;
 
 public class Song {
     public String name;
@@ -148,6 +152,40 @@ public class Song {
                 return Optional.of(Instrument.Pling);
         }
         return Optional.empty();
+    }
+
+    public void playSong() {
+        Bukkit.getScheduler()
+                .runTaskAsynchronously(Cornroot.getPlugin(Cornroot.class), () -> {
+                    int lastTick = 0;
+                    for (Song.Note i : this.notes) {
+                        try {
+                            if (i.tick - lastTick != 0)
+                                Thread.sleep((long) ((float) (i.tick - lastTick) / (this.tempo / 1000)));
+                            lastTick = i.tick;
+                        } catch (InterruptedException ex) {
+                            ex.printStackTrace();
+                        }
+                        for (Player p : getServer().getOnlinePlayers()) {
+                            p.playSound(p.getEyeLocation(), i.getSound(), 1.0F, i.getPitch());
+                        }
+                    }
+
+                    if (Cornroot.queue.isEmpty()) {
+                        Cornroot.nowPlaying = null;
+                        return;
+                    }
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    QueueItem queueItem = Cornroot.queue.remove(0);
+                    Cornroot.nowPlaying = queueItem;
+                    Cornroot.songs.get(queueItem.songIndex)
+                            .playSong();
+                });
     }
 
     public float secLength() {

@@ -1,14 +1,13 @@
 package com.connorcode.cornroot.events;
 
 import com.connorcode.cornroot.Cornroot;
+import com.connorcode.cornroot.QueueItem;
 import com.connorcode.cornroot.Song;
 import com.connorcode.cornroot.misc.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.Sound;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -22,8 +21,8 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.scheduler.BukkitRunnable;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -31,7 +30,7 @@ import java.util.*;
 import static org.bukkit.Bukkit.getServer;
 
 public class PlayerInteract implements Listener {
-    HashMap<UUID, Inventory> inventory = new HashMap<>();
+    HashMap<UUID, JukeboxInventory> inventory = new HashMap<>();
     Material[] musicDisks = new Material[]{Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS, Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD, Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,};
     NamespacedKey nextKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "next");
     NamespacedKey idKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "id");
@@ -45,9 +44,10 @@ public class PlayerInteract implements Listener {
 
 
         Inventory inv = getServer().createInventory(null, 18, Component.text("Jukebox"));
-        updateInventory(inv, 0);
+        JukeboxInventory jukeboxInventory = new JukeboxInventory(inv, 0);
+        jukeboxInventory.updateInventory(0);
         inventory.put(e.getPlayer()
-                .getUniqueId(), inv);
+                .getUniqueId(), jukeboxInventory);
         e.getPlayer()
                 .openInventory(inv);
     }
@@ -57,25 +57,30 @@ public class PlayerInteract implements Listener {
         UUID uuid = e.getWhoClicked()
                 .getUniqueId();
         if (e.getAction() == InventoryAction.NOTHING || !inventory.containsKey(
-                uuid) || e.getInventory() != inventory.get(uuid)) return;
+                uuid) || e.getInventory() != inventory.get(uuid).inv) return;
         e.setCancelled(true);
 
-        Inventory inv = inventory.get(uuid);
+        JukeboxInventory inv = inventory.get(uuid);
         try {
             if (e.getSlot() == 14 || e.getSlot() == 12) {
-                Integer storageContent = Objects.requireNonNull(inv.getStorageContents()[e.getSlot()].getItemMeta()
+                Integer storageContent = Objects.requireNonNull(inv.inv.getStorageContents()[e.getSlot()].getItemMeta()
                         .getPersistentDataContainer()
                         .get(nextKey, PersistentDataType.INTEGER));
-                updateInventory(inv, storageContent);
+                inv.updateInventory(storageContent);
                 return;
             }
         } catch (NullPointerException | IndexOutOfBoundsException ignored) {
             return;
         }
 
+        if (e.getSlot() == 17 && inv.inv.getStorageContents()[e.getSlot()].getType() == Material.BARRIER) {
+            inv.updateInventory(inv.page);
+            return;
+        }
+
         // Get music id (if any)
         try {
-            int id = Objects.requireNonNull(inv.getStorageContents()[e.getSlot()].getItemMeta()
+            int id = Objects.requireNonNull(inv.inv.getStorageContents()[e.getSlot()].getItemMeta()
                     .getPersistentDataContainer()
                     .get(idKey, PersistentDataType.INTEGER));
 
@@ -87,25 +92,33 @@ public class PlayerInteract implements Listener {
                 ex.printStackTrace();
             }
 
+            // Check perms for global play
+            PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
+                    "SELECT Count(*) FROM users WHERE uuid = ?1 AND perms >= 1");
+            stmt.setString(1, String.valueOf(e.getWhoClicked()
+                    .getUniqueId()));
+            ResultSet res = stmt.executeQuery();
+            if (!res.next() || res.getInt(1) < 1) {
+                inv.showInventoryToast("You dont have the global music key");
+                return;
+            }
+
+            if (Cornroot.nowPlaying != null) {
+                Cornroot.queue.add(new QueueItem(id, (Player) e.getWhoClicked()));
+                e.getWhoClicked()
+                        .sendActionBar(
+                                Component.text(String.format("Song added to queue: %s", Cornroot.songs.get(id).name)));
+                inv.updateInventory(inv.page);
+                return;
+            }
+
             // Play song
+            Cornroot.nowPlaying = new QueueItem(id, (Player) e.getWhoClicked());
             Song song = Cornroot.songs.get(id);
             e.getWhoClicked()
                     .sendActionBar(Component.text(String.format("Now Playing: %s", song.name)));
-            Bukkit.getScheduler().runTaskAsynchronously(Cornroot.getPlugin(Cornroot.class), () -> {
-                int lastTick = 0;
-                for (Song.Note i: song.notes) {
-                    try {
-                        if (i.tick - lastTick != 0) Thread.sleep((long) ((float) (i.tick - lastTick) / (song.tempo / 1000)));
-                        lastTick = i.tick;
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
-                    for (Player p: getServer().getOnlinePlayers()) {
-                        p.playSound(p.getEyeLocation(), i.getSound(), 1.0F, i.getPitch());
-                    }
-                }
-            });
-        } catch (NumberFormatException | NullPointerException ignored) {
+            song.playSong();
+        } catch (NumberFormatException | NullPointerException | SQLException ignored) {
         }
     }
 
@@ -117,78 +130,126 @@ public class PlayerInteract implements Listener {
                 .getUniqueId());
     }
 
-    void updateInventory(Inventory inv, int page) {
-        // Gen info
-        int totalPlays = 0;
-        int globalPlays = 0;
-        try {
-            ResultSet res = Cornroot.database.connection.prepareStatement(
-                            "SELECT totalPlays, globalPlays FROM storage LIMIT 1")
-                    .executeQuery();
-            totalPlays = res.getInt(1);
-            globalPlays = res.getInt(2);
-        } catch (SQLException ex) {
-            ex.printStackTrace();
+
+    class JukeboxInventory {
+        public Inventory inv;
+        public int page;
+
+        JukeboxInventory(Inventory inv, int page) {
+            this.inv = inv;
+            this.page = page;
         }
 
-        String[][] info = new String[][]{{"Creator", "Sigma#8214"}, {"Version", "0.0.1"}, {"Jukeboxes", String.valueOf(
-                Cornroot.jukeboxes.size())}, {"Total Plays", String.valueOf(
-                totalPlays)}, {"Global Plays", String.valueOf(globalPlays)}};
+        void clearInventory() {
+            for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, new ItemStack(Material.AIR));
+        }
 
-        // Add disks for page
-        for (int i = 0; i < 9; i++) {
-            int realIndex = page * 9 + i;
+        void showInventoryToast(String msg) {
+            this.clearInventory();
 
-            if (realIndex >= Cornroot.songs.size()) {
-                inv.setItem(i, new ItemStack(Material.AIR));
-                continue;
-            }
-            Song song = Cornroot.songs.get(realIndex);
+            inv.setItem(4, Util.cleanItemStack(Material.MAGENTA_STAINED_GLASS_PANE, 1, m -> {
+                m.displayName(Component.text(msg));
+            }));
 
-            inv.setItem(i, Util.cleanItemStack(musicDisks[new Random(i).nextInt(musicDisks.length)], 1, m -> {
-                ArrayList<Component> components = new ArrayList<>();
-                components.add(
-                        Component.text(String.format("Artist: %s", song.author), TextColor.color(255, 255, 255)));
-                components.add(Component.text(String.format("Length: %s", Util.songLength(song.secLength())),
-                        TextColor.color(255, 255, 255)));
-                m.lore(components);
-                m.getPersistentDataContainer()
-                        .set(idKey, PersistentDataType.INTEGER, realIndex);
-                m.displayName(Component.text(song.name));
+            inv.setItem(17, Util.cleanItemStack(Material.BARRIER, 1, m -> {
+                m.displayName(Component.text("Exit"));
+                m.addEnchant(Enchantment.DURABILITY, 1, false);
+                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             }));
         }
 
-        // Add Info
-        inv.setItem(17, Util.cleanItemStack(Material.HEART_OF_THE_SEA, 1, m -> {
-            m.displayName(Component.text("Info"));
+        void updateInventory(int page) {
+            // Clear Inventory
+            this.clearInventory();
 
-            ArrayList<Component> components = new ArrayList<>();
-            for (String[] i : info)
-                components.add(Component.text(String.format("%s: %s", i[0], i[1]), TextColor.color(255, 255, 255)));
-            m.lore(components);
-        }));
+            // Gen info
+            int totalPlays = 0;
+            int globalPlays = 0;
+            try {
+                ResultSet res = Cornroot.database.connection.prepareStatement(
+                                "SELECT totalPlays, globalPlays FROM storage LIMIT 1")
+                        .executeQuery();
+                totalPlays = res.getInt(1);
+                globalPlays = res.getInt(2);
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
 
-        // Add page switchers
-        inv.setItem(12, Util.cleanItemStack(Material.EMERALD, 1, m -> {
-            m.displayName(Component.text("Previous Page"));
-            if (page <= 0) return;
-            m.getPersistentDataContainer()
-                    .set(nextKey, PersistentDataType.INTEGER, page - 1);
-            m.addEnchant(Enchantment.DURABILITY, 1, false);
-            m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }));
+            String[][] info = new String[][]{{"Creator", "Sigma#8214"}, {"Version", "0.0.1"}, {"Jukeboxes", String.valueOf(
+                    Cornroot.jukeboxes.size())}, {"Total Plays", String.valueOf(
+                    totalPlays)}, {"Global Plays", String.valueOf(globalPlays)}};
 
-        inv.setItem(14, Util.cleanItemStack(Material.EMERALD, 1, m -> {
-            m.displayName(Component.text("Next Page"));
-            if (Cornroot.songs.size() < (page + 1) * 9) return;
-            m.getPersistentDataContainer()
-                    .set(nextKey, PersistentDataType.INTEGER, page + 1);
-            m.addEnchant(Enchantment.DURABILITY, 1, false);
-            m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }));
+            // Add disks for page
+            for (int i = 0; i < 9; i++) {
+                int realIndex = page * 9 + i;
+                if (realIndex >= Cornroot.songs.size()) {
+                    continue;
+                }
+                Song song = Cornroot.songs.get(realIndex);
 
-        // Add page number
-        inv.setItem(13, Util.cleanItemStack(Material.GRAY_STAINED_GLASS_PANE, 1,
-                m -> m.displayName(Component.text(String.format("%d/%d", page + 1, Cornroot.songs.size() / 9 + 1)))));
+                inv.setItem(i, Util.cleanItemStack(musicDisks[new Random(i).nextInt(musicDisks.length)], 1, m -> {
+                    ArrayList<Component> components = new ArrayList<>();
+                    components.add(
+                            Component.text(String.format("Artist: %s", song.author), TextColor.color(255, 255, 255)));
+                    components.add(Component.text(String.format("Length: %s", Util.songLength(song.secLength())),
+                            TextColor.color(255, 255, 255)));
+                    m.lore(components);
+                    m.getPersistentDataContainer()
+                            .set(idKey, PersistentDataType.INTEGER, realIndex);
+                    m.displayName(Component.text(song.name));
+                }));
+            }
+
+            // Add Info
+            inv.setItem(17, Util.cleanItemStack(Material.HEART_OF_THE_SEA, 1, m -> {
+                m.displayName(Component.text("Info"));
+
+                ArrayList<Component> components = new ArrayList<>();
+                for (String[] i : info)
+                    components.add(Component.text(String.format("%s: %s", i[0], i[1]), TextColor.color(255, 255, 255)));
+                m.lore(components);
+            }));
+
+            // Add queue
+            inv.setItem(16, Util.cleanItemStack(Material.ENDER_PEARL, 1, m -> {
+                m.displayName(Component.text("Queue"));
+
+                ArrayList<Component> components = new ArrayList<>();
+                for (int i = 0; i < Cornroot.queue.size(); i++) {
+                    if (i > 9) {
+                        components.add(Component.text("...", TextColor.color(255, 255, 255)));
+                        break;
+                    }
+                    components.add(Component.text(
+                            String.format("#%d. %s", i, Cornroot.songs.get(Cornroot.queue.get(i).songIndex).name),
+                            TextColor.color(255, 255, 255)));
+                }
+                m.lore(components);
+            }));
+
+            // Add page switchers
+            inv.setItem(12, Util.cleanItemStack(Material.EMERALD, 1, m -> {
+                m.displayName(Component.text("Previous Page"));
+                if (page <= 0) return;
+                m.getPersistentDataContainer()
+                        .set(nextKey, PersistentDataType.INTEGER, page - 1);
+                m.addEnchant(Enchantment.DURABILITY, 1, false);
+                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            }));
+
+            inv.setItem(14, Util.cleanItemStack(Material.EMERALD, 1, m -> {
+                m.displayName(Component.text("Next Page"));
+                if (Cornroot.songs.size() < (page + 1) * 9) return;
+                m.getPersistentDataContainer()
+                        .set(nextKey, PersistentDataType.INTEGER, page + 1);
+                m.addEnchant(Enchantment.DURABILITY, 1, false);
+                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            }));
+
+            // Add page number
+            inv.setItem(13, Util.cleanItemStack(Material.GRAY_STAINED_GLASS_PANE, 1,
+                    m -> m.displayName(
+                            Component.text(String.format("%d/%d", page + 1, Cornroot.songs.size() / 9 + 1)))));
+        }
     }
 }

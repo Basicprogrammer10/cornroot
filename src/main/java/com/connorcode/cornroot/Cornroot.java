@@ -11,16 +11,16 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 public final class Cornroot extends JavaPlugin {
     public static Database database;
     public static List<Location> jukeboxes = new ArrayList<>();
     public static List<Song> songs = new ArrayList<>();
+    public static List<QueueItem> queue = new ArrayList<>();
+    public static QueueItem nowPlaying = null;
     File config = new File(getDataFolder() + File.separator + "config.yml");
     File songFolder = new File(getDataFolder() + File.separator + "songs");
 
@@ -51,7 +51,6 @@ public final class Cornroot extends JavaPlugin {
                 e.printStackTrace();
             }
         }
-        System.out.println(songs.get(0).notes.stream().map(s -> String.format("%s\n", s)).collect(Collectors.joining()));
 
         // Init Event Handlers
         getServer().getPluginManager()
