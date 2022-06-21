@@ -3,11 +3,13 @@ package com.connorcode.cornroot;
 import com.connorcode.cornroot.commands.GlobalKeyAdd;
 import com.connorcode.cornroot.commands.GlobalKeyCompletor;
 import com.connorcode.cornroot.commands.GlobalKeyList;
-import com.connorcode.cornroot.commands.GlobalKeyRemove;
 import com.connorcode.cornroot.events.PlayerInteract;
+import com.connorcode.cornroot.events.WorldSave;
 import com.connorcode.cornroot.misc.Database;
 import com.connorcode.cornroot.misc.QueueItem;
+import com.connorcode.cornroot.misc.Util;
 import org.bukkit.Location;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -31,6 +33,7 @@ public final class Cornroot extends JavaPlugin {
         if (!configFile.exists()) saveDefaultConfig();
         assert songFolder.exists() || songFolder.mkdir();
         database = new Database("data.db");
+        Util.refreshMuteCache();
 
         // Load jukebox positions
         List<String> rawJukeboxes = getConfig().getStringList("jukeboxes");
@@ -54,18 +57,14 @@ public final class Cornroot extends JavaPlugin {
         }
 
         // Init Event Handlers
-        getServer().getPluginManager()
-                .registerEvents(new PlayerInteract(), this);
+        PluginManager pm = getServer().getPluginManager();
+        pm.registerEvents(new PlayerInteract(), this);
+        pm.registerEvents(new WorldSave(), this);
 
         // Init Commands
         Objects.requireNonNull(getServer().getPluginCommand("globalkeyadd"))
                 .setExecutor(new GlobalKeyAdd());
         Objects.requireNonNull(getServer().getPluginCommand("globalkeyadd"))
-                .setTabCompleter(new GlobalKeyCompletor());
-
-        Objects.requireNonNull(getServer().getPluginCommand("globalkeyremove"))
-                .setExecutor(new GlobalKeyRemove());
-        Objects.requireNonNull(getServer().getPluginCommand("globalkeyremove"))
                 .setTabCompleter(new GlobalKeyCompletor());
 
         Objects.requireNonNull(getServer().getPluginCommand("globalkeylist"))

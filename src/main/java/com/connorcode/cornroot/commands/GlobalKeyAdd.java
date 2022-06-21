@@ -38,15 +38,21 @@ public class GlobalKeyAdd implements CommandExecutor {
 
         try {
             PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
-                    "INSERT OR IGNORE INTO users (uuid, perms, date) VALUES (?1, 1, strftime('%s','now'))");
+                    "INSERT OR IGNORE INTO users (uuid, keys, mute, date) VALUES (?1, 0, 0, strftime('%s','now'));");
+            PreparedStatement stmt2 = Cornroot.database.connection.prepareStatement(
+                    "UPDATE users SET keys = keys + 1 WHERE uuid = ?1;");
+
             stmt.setString(1, uuid.toString());
+            stmt2.setString(1, uuid.toString());
+
             stmt.executeUpdate();
+            stmt2.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        String resp = "[Cornroot] Added player";
-        if (player.getPlayer() != null) resp = String.format("[Cornroot] Added player `%s`", player.getName());
+        String resp = "[Cornroot] Added key to player";
+        if (player.getPlayer() != null) resp = String.format("[Cornroot] Added key to player `%s`", player.getName());
 
         sender.sendMessage(Component.text(resp));
         return true;

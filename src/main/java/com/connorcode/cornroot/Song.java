@@ -186,6 +186,8 @@ public class Song {
                             ex.printStackTrace();
                         }
                         for (Player p : getServer().getOnlinePlayers()) {
+                            if (PlayerInteract.muteCache.containsKey(p.getUniqueId()) && PlayerInteract.muteCache.get(
+                                    p.getUniqueId())) continue;
                             p.playSound(p.getEyeLocation(), i.getSound(), Config.baseVolume, i.getPitch());
                         }
                     }

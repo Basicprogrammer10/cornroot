@@ -2,12 +2,14 @@ package com.connorcode.cornroot.events;
 
 import com.connorcode.cornroot.Config;
 import com.connorcode.cornroot.Cornroot;
-import com.connorcode.cornroot.misc.QueueItem;
 import com.connorcode.cornroot.Song;
 import com.connorcode.cornroot.misc.ItemMetaEditor;
+import com.connorcode.cornroot.misc.QueueItem;
 import com.connorcode.cornroot.misc.Util;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
@@ -22,6 +24,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.sql.PreparedStatement;
@@ -33,6 +36,7 @@ import static org.bukkit.Bukkit.getServer;
 
 public class PlayerInteract implements Listener {
     public static HashMap<UUID, JukeboxInventory> inventory = new HashMap<>();
+    public static HashMap<UUID, Boolean> muteCache = new HashMap<>();
     Material[] musicDisks = new Material[]{Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS, Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD, Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,};
     NamespacedKey nextKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "next");
     NamespacedKey idKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "id");
@@ -46,7 +50,7 @@ public class PlayerInteract implements Listener {
 
 
         Inventory inv = getServer().createInventory(null, 18, Component.text("Jukebox"));
-        JukeboxInventory jukeboxInventory = new JukeboxInventory(inv);
+        JukeboxInventory jukeboxInventory = new JukeboxInventory(inv, e.getPlayer());
         jukeboxInventory.updateInventory(0);
         inventory.put(e.getPlayer()
                 .getUniqueId(), jukeboxInventory);
@@ -63,8 +67,10 @@ public class PlayerInteract implements Listener {
         e.setCancelled(true);
 
         JukeboxInventory inv = inventory.get(uuid);
+
+        // Process page change
         try {
-            if (e.getSlot() == 14 || e.getSlot() == 12) {
+            if (inv.pageType == PageType.Home && (e.getSlot() == 14 || e.getSlot() == 12)) {
                 Integer storageContent = Objects.requireNonNull(inv.inv.getStorageContents()[e.getSlot()].getItemMeta()
                         .getPersistentDataContainer()
                         .get(nextKey, PersistentDataType.INTEGER));
@@ -76,9 +82,17 @@ public class PlayerInteract implements Listener {
             return;
         }
 
-        if (e.getSlot() == 17 && inv.inv.getStorageContents()[e.getSlot()].getType() == Material.BARRIER) {
+        // Process Toast exit
+        if (inv.pageType == PageType.Toast && e.getSlot() == 17) {
             inv.updateInventory(inv.page);
             return;
+        }
+
+        // Process mute
+        if (inv.pageType == PageType.Home && e.getSlot() == 10) {
+            inv.mute ^= true;
+            muteCache.put(inv.player.getUniqueId(), inv.mute);
+            inv.updateInventory(inv.page);
         }
 
         // Get music id (if any)
@@ -87,18 +101,30 @@ public class PlayerInteract implements Listener {
                     .getPersistentDataContainer()
                     .get(idKey, PersistentDataType.INTEGER));
 
-            // Check perms for global play
-            PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
-                    "SELECT Count(*) FROM users WHERE uuid = ?1 AND perms >= 1");
-            stmt.setString(1, String.valueOf(e.getWhoClicked()
-                    .getUniqueId()));
-            ResultSet res = stmt.executeQuery();
-            if (!res.next() || res.getInt(1) < 1) {
-                inv.showInventoryToast("You dont have any global music keys", m -> {
-                    m.lore(Collections.singletonList(
-                            Component.text(String.format("Purchase a global music key at %s", Config.purchaseLink))));
-                });
-                return;
+            // Check keys for global play
+            if (!Util.bypassKeyCheck((Player) e.getWhoClicked())) {
+                PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
+                        "SELECT Count(*) FROM users WHERE uuid = ?1 AND keys >= 1");
+                stmt.setString(1, String.valueOf(e.getWhoClicked()
+                        .getUniqueId()));
+                ResultSet res = stmt.executeQuery();
+                if (!res.next() || res.getInt(1) < 1) {
+                    inv.showInventoryToast("You dont have any global music keys", m -> {
+                        m.lore(Collections.singletonList(
+                                Component.join(Component.text(" "), Component.text("Purchase a global music key at"),
+                                        Component.text(Config.purchaseLink, Style.style(TextColor.color(0, 170, 170),
+                                                TextDecoration.UNDERLINED)))));
+                    });
+                    return;
+                }
+
+                // Remove a global music key
+                PreparedStatement stmt2 = Cornroot.database.connection.prepareStatement(
+                        "UPDATE users SET keys = keys - 1 WHERE uuid = ?1");
+                stmt2.setString(1, String.valueOf(e.getWhoClicked()
+                        .getUniqueId()));
+                stmt2.executeUpdate();
+                inv.updateInventory(inv.page);
             }
 
             if (Cornroot.nowPlaying != null) {
@@ -113,8 +139,14 @@ public class PlayerInteract implements Listener {
             // Play song
             Cornroot.nowPlaying = new QueueItem(id, (Player) e.getWhoClicked());
             Song song = Cornroot.songs.get(id);
-            e.getWhoClicked()
-                    .sendActionBar(Component.text(String.format("Now Playing: %s", song.name)));
+
+            // Broadcast play
+            for (Player i : getServer().getOnlinePlayers()) {
+                if (muteCache.containsKey(i.getUniqueId()) && muteCache.get(i.getUniqueId())) continue;
+                i.sendActionBar(Component.text(String.format("Now Playing: %s", song.name)));
+            }
+
+            // Start playback
             song.playSong();
         } catch (NumberFormatException | NullPointerException | SQLException ignored) {
         }
@@ -133,14 +165,18 @@ public class PlayerInteract implements Listener {
     }
 
     public class JukeboxInventory {
+        public Player player;
         public Inventory inv;
         public PageType pageType;
         public int page;
+        public boolean mute;
 
-        JukeboxInventory(Inventory inv) {
+        JukeboxInventory(Inventory inv, Player player) {
             this.inv = inv;
+            this.player = player;
             this.page = 0;
             this.pageType = PageType.Home;
+            this.mute = muteCache.containsKey(player.getUniqueId()) && muteCache.get(player.getUniqueId());
         }
 
         public void clearInventory(int... slot) {
@@ -214,12 +250,59 @@ public class PlayerInteract implements Listener {
                 m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             }));
 
+            // Add user info
+            int keys = 0;
+            int plays = 0;
+            try {
+                PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
+                        "SELECT keys FROM users WHERE uuid = ?1");
+                PreparedStatement stmt2 = Cornroot.database.connection.prepareStatement(
+                        "SELECT COUNT(*) FROM plays WHERE player = ?1");
+
+                stmt.setString(1, String.valueOf(player.getUniqueId()));
+                stmt2.setString(1, String.valueOf(player.getUniqueId()));
+
+                keys = stmt.executeQuery()
+                        .getInt(1);
+                plays = stmt2.executeQuery()
+                        .getInt(1);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            int finalKeys = keys;
+            int finalPlays = plays;
+            inv.setItem(9, Util.cleanItemStack(Material.PLAYER_HEAD, 1, m -> {
+                m.displayName(Component.text("User Info"));
+                ((SkullMeta) m).setOwningPlayer(player);
+
+                List<Component> lore = new ArrayList<>();
+                if (Util.bypassKeyCheck(player))
+                    lore.add(Component.text("*Key bypass*", TextColor.color(255, 255, 255)));
+                lore.add(Component.text(String.format("Name: %s", player.getName()), TextColor.color(255, 255, 255)));
+                lore.add(Component.text(String.format("Keys: %d", finalKeys), TextColor.color(255, 255, 255)));
+                lore.add(Component.text(String.format("Plays: %d", finalPlays), TextColor.color(255, 255, 255)));
+                m.lore(lore);
+            }));
+
+            // Add mute button
+            if (mute) inv.setItem(10, Util.cleanItemStack(Material.BARRIER, 1, m -> {
+                m.displayName(Component.text("Unmute"));
+                m.addEnchant(Enchantment.DURABILITY, 1, false);
+                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            }));
+            else inv.setItem(10, Util.cleanItemStack(Material.JUNGLE_SIGN, 1, m -> {
+                m.displayName(Component.text("Mute"));
+                m.addEnchant(Enchantment.DURABILITY, 1, false);
+                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            }));
+
             // Add page number
             inv.setItem(13, Util.cleanItemStack(Material.GRAY_STAINED_GLASS_PANE, 1, m -> m.displayName(
                     Component.text(String.format("%d/%d", page + 1, Cornroot.songs.size() / 9 + 1)))));
 
             // Clear Inventory
-            this.clearInventory(9, 10, 11, 15);
+            this.clearInventory(11, 15);
         }
 
         public void updateQueueInfo() {
@@ -268,7 +351,8 @@ public class PlayerInteract implements Listener {
 
                 for (int i = 0; i < Cornroot.queue.size(); i++) {
                     if (i > 9) {
-                        components.add(Component.text("...", TextColor.color(255, 255, 255)));
+                        components.add(Component.text(String.format("%d more", Cornroot.queue.size() - 10),
+                                TextColor.color(255, 255, 255)));
                         break;
                     }
                     components.add(Component.text(
