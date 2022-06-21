@@ -2,6 +2,7 @@ package com.connorcode.cornroot;
 
 import com.connorcode.cornroot.events.PlayerInteract;
 import com.connorcode.cornroot.misc.MutInt;
+import com.connorcode.cornroot.misc.QueueItem;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -185,7 +186,7 @@ public class Song {
                             ex.printStackTrace();
                         }
                         for (Player p : getServer().getOnlinePlayers()) {
-                            p.playSound(p.getEyeLocation(), i.getSound(), 1.0F, i.getPitch());
+                            p.playSound(p.getEyeLocation(), i.getSound(), Config.baseVolume, i.getPitch());
                         }
                     }
 

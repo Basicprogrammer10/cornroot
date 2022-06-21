@@ -1,4 +1,4 @@
-package com.connorcode.cornroot;
+package com.connorcode.cornroot.misc;
 
 import org.bukkit.entity.Player;
 

@@ -6,6 +6,7 @@ import com.connorcode.cornroot.commands.GlobalKeyList;
 import com.connorcode.cornroot.commands.GlobalKeyRemove;
 import com.connorcode.cornroot.events.PlayerInteract;
 import com.connorcode.cornroot.misc.Database;
+import com.connorcode.cornroot.misc.QueueItem;
 import org.bukkit.Location;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -21,13 +22,13 @@ public final class Cornroot extends JavaPlugin {
     public static List<Song> songs = new ArrayList<>();
     public static List<QueueItem> queue = new ArrayList<>();
     public static QueueItem nowPlaying = null;
-    File config = new File(getDataFolder() + File.separator + "config.yml");
+    File configFile = new File(getDataFolder() + File.separator + "config.yml");
     File songFolder = new File(getDataFolder() + File.separator + "songs");
 
     @Override
     public void onEnable() {
         // Init config file and database
-        if (!config.exists()) saveDefaultConfig();
+        if (!configFile.exists()) saveDefaultConfig();
         assert songFolder.exists() || songFolder.mkdir();
         database = new Database("data.db");
 

@@ -1,8 +1,10 @@
 package com.connorcode.cornroot.events;
 
+import com.connorcode.cornroot.Config;
 import com.connorcode.cornroot.Cornroot;
-import com.connorcode.cornroot.QueueItem;
+import com.connorcode.cornroot.misc.QueueItem;
 import com.connorcode.cornroot.Song;
+import com.connorcode.cornroot.misc.ItemMetaEditor;
 import com.connorcode.cornroot.misc.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -37,8 +39,8 @@ public class PlayerInteract implements Listener {
 
     @EventHandler
     void PlayerJukeboxInteractEvent(PlayerInteractEvent e) {
-        if (e.getAction() != Action.RIGHT_CLICK_BLOCK && !e.getPlayer()
-                .isSneaking() || !Cornroot.jukeboxes.contains(Objects.requireNonNull(e.getClickedBlock())
+        if ((e.getAction() != Action.RIGHT_CLICK_BLOCK && !e.getPlayer()
+                .isSneaking()) || !Cornroot.jukeboxes.contains(Objects.requireNonNull(e.getClickedBlock())
                 .getLocation())) return;
         e.setCancelled(true);
 
@@ -92,7 +94,10 @@ public class PlayerInteract implements Listener {
                     .getUniqueId()));
             ResultSet res = stmt.executeQuery();
             if (!res.next() || res.getInt(1) < 1) {
-                inv.showInventoryToast("You dont have the global music key");
+                inv.showInventoryToast("You dont have any global music keys", m -> {
+                    m.lore(Collections.singletonList(
+                            Component.text(String.format("Purchase a global music key at %s", Config.purchaseLink))));
+                });
                 return;
             }
 
@@ -144,16 +149,16 @@ public class PlayerInteract implements Listener {
             }
         }
 
-        public void showInventoryToast(String msg) {
+        public void showInventoryToast(String msg, ItemMetaEditor itemMetaEditor) {
             this.pageType = PageType.Toast;
-            this.clearInventory();
 
             inv.setItem(4, Util.cleanItemStack(Material.MAGENTA_STAINED_GLASS_PANE, 1, m -> {
                 m.displayName(Component.text(msg));
+                itemMetaEditor.run(m);
             }));
 
             inv.setItem(17, Util.cleanItemStack(Material.BARRIER, 1, m -> {
-                m.displayName(Component.text("Exit"));
+                m.displayName(Component.text("Back"));
                 m.addEnchant(Enchantment.DURABILITY, 1, false);
                 m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             }));
@@ -172,17 +177,19 @@ public class PlayerInteract implements Listener {
                 }
                 Song song = Cornroot.songs.get(realIndex);
 
-                inv.setItem(i, Util.cleanItemStack(musicDisks[new Random(realIndex).nextInt(musicDisks.length)], 1, m -> {
-                    ArrayList<Component> components = new ArrayList<>();
-                    components.add(
-                            Component.text(String.format("Artist: %s", song.author), TextColor.color(255, 255, 255)));
-                    components.add(Component.text(String.format("Length: %s", Util.songLength(song.secLength())),
-                            TextColor.color(255, 255, 255)));
-                    m.lore(components);
-                    m.getPersistentDataContainer()
-                            .set(idKey, PersistentDataType.INTEGER, realIndex);
-                    m.displayName(Component.text(song.name));
-                }));
+                inv.setItem(i,
+                        Util.cleanItemStack(musicDisks[new Random(realIndex).nextInt(musicDisks.length)], 1, m -> {
+                            ArrayList<Component> components = new ArrayList<>();
+                            components.add(Component.text(String.format("Artist: %s", song.author),
+                                    TextColor.color(255, 255, 255)));
+                            components.add(
+                                    Component.text(String.format("Length: %s", Util.songLength(song.secLength())),
+                                            TextColor.color(255, 255, 255)));
+                            m.lore(components);
+                            m.getPersistentDataContainer()
+                                    .set(idKey, PersistentDataType.INTEGER, realIndex);
+                            m.displayName(Component.text(song.name));
+                        }));
             }
 
             // Update queue and info
