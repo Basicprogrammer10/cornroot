@@ -1,5 +1,6 @@
 package com.connorcode.cornroot;
 
+import com.connorcode.cornroot.events.PlayerInteract;
 import com.connorcode.cornroot.misc.MutInt;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -7,6 +8,7 @@ import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -157,6 +159,22 @@ public class Song {
     public void playSong() {
         Bukkit.getScheduler()
                 .runTaskAsynchronously(Cornroot.getPlugin(Cornroot.class), () -> {
+                    Bukkit.getScheduler()
+                            .runTaskAsynchronously(Cornroot.getPlugin(Cornroot.class), () -> {
+                                // Increment stats
+                                try {
+                                    Cornroot.database.connection.prepareStatement(
+                                                    "UPDATE storage SET totalPlays = totalPlays + 1, globalPlays = globalPlays + 1")
+                                            .executeUpdate();
+                                } catch (SQLException ex) {
+                                    ex.printStackTrace();
+                                }
+
+                                // Update jukebox inventorys
+                                PlayerInteract.inventory.values()
+                                        .forEach(PlayerInteract.JukeboxInventory::updateQueueInfo);
+                            });
+
                     int lastTick = 0;
                     for (Song.Note i : this.notes) {
                         try {
@@ -183,6 +201,11 @@ public class Song {
                     }
                     QueueItem queueItem = Cornroot.queue.remove(0);
                     Cornroot.nowPlaying = queueItem;
+
+                    Bukkit.getScheduler()
+                            .runTaskAsynchronously(Cornroot.getPlugin(Cornroot.class),
+                                    () -> PlayerInteract.inventory.values()
+                                            .forEach(PlayerInteract.JukeboxInventory::updateQueueInfo));
                     Cornroot.songs.get(queueItem.songIndex)
                             .playSong();
                 });

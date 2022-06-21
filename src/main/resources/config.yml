@@ -1,3 +1,7 @@
 # Positions of jukeboxes in the world ("World, X, Z, Y")
 jukeboxes:
   - "World, -195, 50, 82"
+
+# Set max queued songs for any player
+# -1 to disable
+maxQueueSongs: 1
