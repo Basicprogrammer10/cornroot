@@ -6,12 +6,12 @@ authors: [ ConnorSlade ]
 description: A music system
 website: https://connorcode.com
 commands:
+  music:
+    description: Opens the jukebox GUI
+    usage: music
   globalkeyadd:
     description: Give player access to playing global music
     usage: globalkeyadd <UUID>
-  globalkeyremove:
-    description: Remove player access to playing global music
-    usage: globalkeyremove <UUID>
   globalkeylist:
     description: List player with global music perms
     usage: globalkeylist

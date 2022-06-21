@@ -27,24 +27,25 @@ public class GlobalKeyList implements CommandExecutor {
         StringBuilder out = new StringBuilder();
         try {
             PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
-                    "SELECT uuid FROM users WHERE perms >= 1");
+                    "SELECT uuid, keys FROM users WHERE keys >= 1");
             ResultSet res = stmt.executeQuery();
 
             while (res.next()) {
                 UUID uuid = UUID.fromString(res.getString(1));
+                int keys = res.getInt(2);
                 Player player = Bukkit.getOfflinePlayer(uuid)
                         .getPlayer();
-                if (player != null) out.append(String.format("%s, ", player.getName()));
-                else out.append(String.format("%s, ", uuid));
+                if (player != null) out.append(String.format("%s %d\n", player.getName(), keys));
+                else out.append(String.format("%s %d\n", uuid, keys));
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        if (out.length() < 2) sender.sendMessage(Component.join(Component.text(" "), Component.text("[Cornroot]"),
+        if (out.length() < 1) sender.sendMessage(Component.join(Component.text(" "), Component.text("[Cornroot]"),
                 Component.text("*nobody*", Style.style(TextDecoration.ITALIC))));
         else sender.sendMessage(Component.join(Component.text(" "), Component.text("[Cornroot]"),
-                Component.text(out.substring(0, out.length() - 2))));
+                Component.text(out.substring(0, out.length() - 1))));
         return true;
     }
 }

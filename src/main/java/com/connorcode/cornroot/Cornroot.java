@@ -3,6 +3,7 @@ package com.connorcode.cornroot;
 import com.connorcode.cornroot.commands.GlobalKeyAdd;
 import com.connorcode.cornroot.commands.GlobalKeyCompletor;
 import com.connorcode.cornroot.commands.GlobalKeyList;
+import com.connorcode.cornroot.commands.Music;
 import com.connorcode.cornroot.events.PlayerInteract;
 import com.connorcode.cornroot.events.WorldSave;
 import com.connorcode.cornroot.misc.Database;
@@ -64,11 +65,14 @@ public final class Cornroot extends JavaPlugin {
         // Init Commands
         Objects.requireNonNull(getServer().getPluginCommand("globalkeyadd"))
                 .setExecutor(new GlobalKeyAdd());
+        Objects.requireNonNull(getServer().getPluginCommand("globalkeylist"))
+                .setExecutor(new GlobalKeyList());
+        Objects.requireNonNull(getServer().getPluginCommand("music"))
+                .setExecutor(new Music());
+
         Objects.requireNonNull(getServer().getPluginCommand("globalkeyadd"))
                 .setTabCompleter(new GlobalKeyCompletor());
 
-        Objects.requireNonNull(getServer().getPluginCommand("globalkeylist"))
-                .setExecutor(new GlobalKeyList());
     }
 
     @Override

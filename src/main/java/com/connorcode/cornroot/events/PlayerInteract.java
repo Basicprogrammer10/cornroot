@@ -37,9 +37,9 @@ import static org.bukkit.Bukkit.getServer;
 public class PlayerInteract implements Listener {
     public static HashMap<UUID, JukeboxInventory> inventory = new HashMap<>();
     public static HashMap<UUID, Boolean> muteCache = new HashMap<>();
-    Material[] musicDisks = new Material[]{Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS, Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD, Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,};
-    NamespacedKey nextKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "next");
-    NamespacedKey idKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "id");
+    static Material[] musicDisks = new Material[]{Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS, Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD, Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,};
+    static NamespacedKey nextKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "next");
+    static NamespacedKey idKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "id");
 
     @EventHandler
     void PlayerJukeboxInteractEvent(PlayerInteractEvent e) {
@@ -109,12 +109,10 @@ public class PlayerInteract implements Listener {
                         .getUniqueId()));
                 ResultSet res = stmt.executeQuery();
                 if (!res.next() || res.getInt(1) < 1) {
-                    inv.showInventoryToast("You dont have any global music keys", m -> {
-                        m.lore(Collections.singletonList(
-                                Component.join(Component.text(" "), Component.text("Purchase a global music key at"),
-                                        Component.text(Config.purchaseLink, Style.style(TextColor.color(0, 170, 170),
-                                                TextDecoration.UNDERLINED)))));
-                    });
+                    inv.showInventoryToast("You dont have any global music keys", m -> m.lore(Collections.singletonList(
+                            Component.join(Component.text(" "), Component.text("Purchase a global music key at"),
+                                    Component.text(Config.purchaseLink, Style.style(TextColor.color(0, 170, 170),
+                                            TextDecoration.UNDERLINED))))));
                     return;
                 }
 
@@ -164,14 +162,14 @@ public class PlayerInteract implements Listener {
         Home, Toast
     }
 
-    public class JukeboxInventory {
+    public static class JukeboxInventory {
         public Player player;
         public Inventory inv;
         public PageType pageType;
         public int page;
         public boolean mute;
 
-        JukeboxInventory(Inventory inv, Player player) {
+        public JukeboxInventory(Inventory inv, Player player) {
             this.inv = inv;
             this.player = player;
             this.page = 0;

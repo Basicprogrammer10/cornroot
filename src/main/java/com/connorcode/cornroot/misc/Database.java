@@ -3,7 +3,10 @@ package com.connorcode.cornroot.misc;
 import com.connorcode.cornroot.Cornroot;
 
 import java.io.File;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 import static org.bukkit.plugin.java.JavaPlugin.getPlugin;
 
