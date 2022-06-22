@@ -3,7 +3,6 @@ package com.connorcode.cornroot.misc;
 import com.connorcode.cornroot.Cornroot;
 import com.connorcode.cornroot.events.PlayerInteract;
 import org.bukkit.Material;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;

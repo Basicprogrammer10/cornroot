@@ -16,6 +16,7 @@ import java.util.UUID;
 public class GlobalKeyAdd implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+        //noinspection DuplicatedCode
         if (!sender.isOp()) {
             sender.sendMessage(Component.text("[Cornroot] You are not OP (:o)"));
             return true;

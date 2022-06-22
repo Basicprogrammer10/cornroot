@@ -17,13 +17,13 @@ import java.util.Objects;
 import java.util.logging.Level;
 
 public final class Cornroot extends JavaPlugin {
+    public static final List<Location> jukeboxes = new ArrayList<>();
+    public static final List<Song> songs = new ArrayList<>();
+    public static final List<QueueItem> queue = new ArrayList<>();
     public static Database database;
-    public static List<Location> jukeboxes = new ArrayList<>();
-    public static List<Song> songs = new ArrayList<>();
-    public static List<QueueItem> queue = new ArrayList<>();
     public static QueueItem nowPlaying = null;
-    File configFile = new File(getDataFolder() + File.separator + "config.yml");
-    File songFolder = new File(getDataFolder() + File.separator + "songs");
+    final File configFile = new File(getDataFolder() + File.separator + "config.yml");
+    final File songFolder = new File(getDataFolder() + File.separator + "songs");
 
     @Override
     public void onEnable() {

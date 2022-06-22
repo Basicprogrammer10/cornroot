@@ -17,6 +17,7 @@ public class GlobalKeyRemove implements CommandExecutor {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        //noinspection DuplicatedCode
         if (!sender.isOp()) {
             sender.sendMessage(Component.text("[Cornroot] You are not OP (:o)"));
             return true;
@@ -57,7 +58,8 @@ public class GlobalKeyRemove implements CommandExecutor {
         }
 
         String resp = "[Cornroot] Removed key from player";
-        if (player.getPlayer() != null) resp = String.format("[Cornroot] Removed key from player `%s`", player.getName());
+        if (player.getPlayer() != null)
+            resp = String.format("[Cornroot] Removed key from player `%s`", player.getName());
 
         sender.sendMessage(Component.text(resp));
         return true;

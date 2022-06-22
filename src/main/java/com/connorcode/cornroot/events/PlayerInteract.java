@@ -37,15 +37,15 @@ import java.util.*;
 import static org.bukkit.Bukkit.getServer;
 
 public class PlayerInteract implements Listener {
-    public static HashMap<UUID, JukeboxInventory> inventory = new HashMap<>();
-    public static HashMap<UUID, Boolean> muteCache = new HashMap<>();
-    static Style baseStyle = Style.style()
+    public static final HashMap<UUID, JukeboxInventory> inventory = new HashMap<>();
+    static final Style baseStyle = Style.style()
             .color(TextColor.color(NamedTextColor.GRAY))
             .decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE)
             .build();
-    static Material[] musicDisks = new Material[]{Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS, Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD, Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,};
-    static NamespacedKey nextKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "next");
-    static NamespacedKey idKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "id");
+    static final Material[] musicDisks = new Material[]{Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS, Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD, Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,};
+    static final NamespacedKey nextKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "next");
+    static final NamespacedKey idKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "id");
+    public static HashMap<UUID, Boolean> muteCache = new HashMap<>();
 
     @EventHandler
     void PlayerJukeboxInteractEvent(PlayerInteractEvent e) {
@@ -204,8 +204,8 @@ public class PlayerInteract implements Listener {
     }
 
     public static class JukeboxInventory {
-        public Player player;
-        public Inventory inv;
+        public final Player player;
+        public final Inventory inv;
         public PageType pageType;
         public int page;
         public boolean mute;
@@ -375,7 +375,7 @@ public class PlayerInteract implements Listener {
 
             ArrayList<String[]> info = new ArrayList<>();
             info.add(new String[]{"Creator", "Sigma#8214"});
-            info.add(new String[]{"Version", "0.0.1"});
+            info.add(new String[]{"Version", "1.0.0"});
             // info.add(new String[]{"Jukeboxes", String.valueOf(Cornroot.jukeboxes.size())});
             info.add(new String[]{"------------------", ""});
             info.add(new String[]{"Songs", String.valueOf(Cornroot.songs.size())});

@@ -244,10 +244,10 @@ public class Song {
     }
 
     public static class Note {
-        public int tick;
-        public Instrument instrument;
-        public byte key;
-        public short pitch;
+        public final int tick;
+        public final Instrument instrument;
+        public final byte key;
+        public final short pitch;
 
         Note(int tick, Instrument instrument, byte key, short pitch) {
             this.tick = tick;
