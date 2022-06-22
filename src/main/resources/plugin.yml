@@ -11,7 +11,10 @@ commands:
     usage: music
   globalkeyadd:
     description: Give player access to playing global music
-    usage: globalkeyadd <UUID>
+    usage: globalkeyadd <UUID> [Count]
+  globalkeyremove:
+    description: Remove keys from a player
+    usage: globalkeyremove <UUID> [Count]
   globalkeylist:
     description: List player with global music perms
     usage: globalkeylist

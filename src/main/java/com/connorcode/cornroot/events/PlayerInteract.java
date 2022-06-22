@@ -10,10 +10,10 @@ import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -40,7 +40,7 @@ public class PlayerInteract implements Listener {
     public static HashMap<UUID, JukeboxInventory> inventory = new HashMap<>();
     public static HashMap<UUID, Boolean> muteCache = new HashMap<>();
     static Style baseStyle = Style.style()
-            .color(TextColor.color(Color.WHITE.asRGB()))
+            .color(TextColor.color(NamedTextColor.GRAY))
             .decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE)
             .build();
     static Material[] musicDisks = new Material[]{Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS, Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD, Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,};
@@ -89,19 +89,20 @@ public class PlayerInteract implements Listener {
         }
 
         // Process Toast exit
-        if (inv.pageType == PageType.Toast && e.getSlot() == 35) {
+        if (inv.pageType == PageType.OutOfKeys && e.getSlot() == 35) {
             inv.updateInventory(inv.page);
             return;
         }
 
         // Process toast print
-        if (inv.pageType == PageType.Toast && e.getSlot() == 13) {
+        if (inv.pageType == PageType.OutOfKeys && e.getSlot() == 13) {
             e.getWhoClicked()
-                    .sendMessage(Identity.nil(), Component.join(Component.text(" "), Component.text("Click =>"),
-                            Component.text(Config.purchaseLink, Style.style()
-                                    .color(TextColor.color(Color.AQUA.asRGB()))
+                    .sendMessage(Identity.nil(), Component.join(Component.newline(),
+                            Component.text("Webstore link:", baseStyle.color(TextColor.color(NamedTextColor.AQUA))),
+                            Component.text(String.format(" %s", Config.purchaseLink), Style.style()
+                                    .color(TextColor.color(NamedTextColor.GOLD))
                                     .decorate(TextDecoration.UNDERLINED)
-                                    .clickEvent(ClickEvent.openUrl(String.format("https://%s", Config.purchaseLink)))
+                                    .clickEvent(ClickEvent.openUrl(Config.fullPurchaseLink))
                                     .build())), MessageType.SYSTEM);
             inv.inv.close();
             return;
@@ -112,6 +113,55 @@ public class PlayerInteract implements Listener {
             inv.mute ^= true;
             muteCache.put(inv.player.getUniqueId(), inv.mute);
             inv.updateInventory(inv.page);
+            return;
+        }
+
+        // Process confirm
+        if (inv.pageType == PageType.Confirm) {
+            // Accept
+            if (e.getSlot() == 15) {
+                inv.inv.close();
+                if (!Util.bypassKeyCheck((Player) e.getWhoClicked())) {
+                    // Remove a global music key
+                    try {
+                        PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
+                                "UPDATE users SET keys = keys - 1 WHERE uuid = ?1");
+                        stmt.setString(1, String.valueOf(e.getWhoClicked()
+                                .getUniqueId()));
+                        stmt.executeUpdate();
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+
+                int id = Objects.requireNonNull(inv.inv.getStorageContents()[e.getSlot()].getItemMeta()
+                        .getPersistentDataContainer()
+                        .get(idKey, PersistentDataType.INTEGER));
+
+                if (Cornroot.nowPlaying != null) {
+                    Cornroot.queue.add(new QueueItem(id, (Player) e.getWhoClicked()));
+                    e.getWhoClicked()
+                            .sendActionBar(Component.text(
+                                    String.format("Song added to queue: %s", Cornroot.songs.get(id).name),
+                                    TextColor.color(NamedTextColor.GOLD)));
+                    return;
+                }
+
+                // Play song
+                Cornroot.nowPlaying = new QueueItem(id, (Player) e.getWhoClicked());
+                Song song = Cornroot.songs.get(id);
+
+                // Start playback
+                song.playSong();
+                return;
+            }
+
+            // Decline
+            if (e.getSlot() == 11) {
+                inv.pageType = PageType.Home;
+                inv.updateInventory(inv.page);
+                return;
+            }
         }
 
         // Get music id (if any)
@@ -128,43 +178,15 @@ public class PlayerInteract implements Listener {
                         .getUniqueId()));
                 ResultSet res = stmt.executeQuery();
                 if (!res.next() || res.getInt(1) < 1) {
-                    inv.showInventoryToast("You dont have any global music keys", m -> m.lore(Collections.singletonList(
-                            Component.join(Component.text(" "), Component.text("Purchase a global music key at"),
-                                    Component.text(Config.purchaseLink,
-                                            Style.style(TextColor.color(0, 170, 170), TextDecoration.UNDERLINED))))));
+                    inv.showInventoryOutOfKeys("You dont have any global music keys", m -> m.lore(
+                            Collections.singletonList(Component.text("Click for link to the webstore",
+                                    baseStyle.color(NamedTextColor.GREEN)))));
                     return;
                 }
-
-                // Remove a global music key
-                PreparedStatement stmt2 = Cornroot.database.connection.prepareStatement(
-                        "UPDATE users SET keys = keys - 1 WHERE uuid = ?1");
-                stmt2.setString(1, String.valueOf(e.getWhoClicked()
-                        .getUniqueId()));
-                stmt2.executeUpdate();
-                inv.updateInventory(inv.page);
             }
 
-            if (Cornroot.nowPlaying != null) {
-                Cornroot.queue.add(new QueueItem(id, (Player) e.getWhoClicked()));
-                e.getWhoClicked()
-                        .sendActionBar(
-                                Component.text(String.format("Song added to queue: %s", Cornroot.songs.get(id).name)));
-                inv.updateInventory(inv.page);
-                return;
-            }
-
-            // Play song
-            Cornroot.nowPlaying = new QueueItem(id, (Player) e.getWhoClicked());
-            Song song = Cornroot.songs.get(id);
-
-            // Broadcast play
-            for (Player i : getServer().getOnlinePlayers()) {
-                if (muteCache.containsKey(i.getUniqueId()) && muteCache.get(i.getUniqueId())) continue;
-                i.sendActionBar(Component.text(String.format("Now Playing: %s", song.name)));
-            }
-
-            // Start playback
-            song.playSong();
+            inv.pageType = PageType.Confirm;
+            inv.showInventorySongConfirm(id);
         } catch (NumberFormatException | NullPointerException | SQLException ignored) {
         }
     }
@@ -178,7 +200,7 @@ public class PlayerInteract implements Listener {
     }
 
     public enum PageType {
-        Home, Toast
+        Home, OutOfKeys, Confirm
     }
 
     public static class JukeboxInventory {
@@ -211,8 +233,50 @@ public class PlayerInteract implements Listener {
             }
         }
 
-        public void showInventoryToast(String msg, ItemMetaEditor itemMetaEditor) {
-            this.pageType = PageType.Toast;
+        public void showInventorySongConfirm(int songIndex) {
+            if (this.pageType != PageType.Confirm) return;
+
+            int keys = 0;
+            try {
+                PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
+                        "SELECT keys FROM users WHERE uuid = ?1");
+                stmt.setString(1, String.valueOf(player.getUniqueId()));
+                keys = stmt.executeQuery()
+                        .getInt(1);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            int finalKeys = keys;
+            Song song = Cornroot.songs.get(songIndex);
+            inv.setItem(4, Util.cleanItemStack(musicDisks[new Random(songIndex).nextInt(musicDisks.length)], 1, m -> {
+                m.displayName(Component.text(song.name, baseStyle.color(TextColor.color(NamedTextColor.AQUA))));
+                ArrayList<Component> components = new ArrayList<>();
+                components.add(Component.text(String.format("Artist: %s", song.author), baseStyle));
+                components.add(
+                        Component.text(String.format("Length: %s", Util.songLength(song.secLength())), baseStyle));
+                m.lore(components);
+            }));
+
+            inv.setItem(11, Util.cleanItemStack(Material.RED_STAINED_GLASS_PANE, 1,
+                    m -> m.displayName(Component.text("Deny", baseStyle.color(NamedTextColor.RED)))));
+
+            inv.setItem(15, Util.cleanItemStack(Material.LIME_STAINED_GLASS_PANE, 1, m -> {
+                m.displayName(Component.text("Confirm", baseStyle.color(NamedTextColor.GREEN)));
+                m.getPersistentDataContainer()
+                        .set(idKey, PersistentDataType.INTEGER, songIndex);
+            }));
+
+            inv.setItem(22, Util.cleanItemStack(Material.TRIPWIRE_HOOK, 1, m -> m.displayName(
+                    Component.join(Component.text(" "),
+                            Component.text("Your keys:", baseStyle.color(NamedTextColor.YELLOW)),
+                            Component.text(finalKeys, baseStyle)))));
+
+            this.clearInventoryBut(4, 11, 15, 22);
+        }
+
+        public void showInventoryOutOfKeys(String msg, ItemMetaEditor itemMetaEditor) {
+            this.pageType = PageType.OutOfKeys;
 
             inv.setItem(13, Util.cleanItemStack(Material.MAGENTA_STAINED_GLASS_PANE, 1, m -> {
                 m.displayName(Component.text(msg, baseStyle));
@@ -248,7 +312,7 @@ public class PlayerInteract implements Listener {
                             m.getPersistentDataContainer()
                                     .set(idKey, PersistentDataType.INTEGER, realIndex);
                             m.displayName(
-                                    Component.text(song.name, baseStyle.color(TextColor.color(Color.AQUA.asRGB()))));
+                                    Component.text(song.name, baseStyle.color(TextColor.color(NamedTextColor.AQUA))));
                         }));
             }
 
@@ -259,14 +323,14 @@ public class PlayerInteract implements Listener {
 
             // Add page switchers
             if (page > 0) inv.setItem(30, Util.cleanItemStack(Material.BOOK, 1, m -> {
-                m.displayName(Component.text("Previous Page", baseStyle));
+                m.displayName(Component.text("Previous Page", baseStyle.color(TextColor.color(NamedTextColor.YELLOW))));
                 m.getPersistentDataContainer()
                         .set(nextKey, PersistentDataType.INTEGER, page - 1);
             }));
             else this.clearInventory(30);
 
             if (Cornroot.songs.size() > (page + 1) * 18) inv.setItem(32, Util.cleanItemStack(Material.BOOK, 1, m -> {
-                m.displayName(Component.text("Next Page", baseStyle));
+                m.displayName(Component.text("Next Page", baseStyle.color(TextColor.color(NamedTextColor.YELLOW))));
                 m.getPersistentDataContainer()
                         .set(nextKey, PersistentDataType.INTEGER, page + 1);
             }));
@@ -274,13 +338,14 @@ public class PlayerInteract implements Listener {
 
             // Add mute button
             if (mute) inv.setItem(28, Util.cleanItemStack(Material.RED_WOOL, 1, m -> m.displayName(
-                    Component.text("MUSIC OFF", baseStyle.color(TextColor.color(Color.RED.asRGB()))))));
+                    Component.text("MUSIC OFF", baseStyle.color(TextColor.color(NamedTextColor.RED))))));
             else inv.setItem(28, Util.cleanItemStack(Material.LIME_WOOL, 1, m -> m.displayName(
-                    Component.text("MUSIC ON", baseStyle.color(TextColor.color(Color.LIME.asRGB()))))));
+                    Component.text("MUSIC ON", baseStyle.color(TextColor.color(NamedTextColor.GREEN))))));
 
             // Add page number
             inv.setItem(31, Util.cleanItemStack(Material.BLACK_STAINED_GLASS_PANE, 1, m -> m.displayName(
-                    Component.text(String.format("%d/%d", page + 1, Cornroot.songs.size() / 18 + 1), baseStyle))));
+                    Component.text(String.format("%d/%d", page + 1, Cornroot.songs.size() / 18 + 1),
+                            baseStyle.color(TextColor.color(NamedTextColor.YELLOW))))));
 
             // Update queue and info
             this.updateQueueInfo();
@@ -296,13 +361,13 @@ public class PlayerInteract implements Listener {
             if (pageType != PageType.Home) return;
 
             // Gen info
-            int totalPlays = 0;
+//            int totalPlays = 0;
             int globalPlays = 0;
             try {
                 ResultSet res = Cornroot.database.connection.prepareStatement(
                                 "SELECT totalPlays, globalPlays FROM storage LIMIT 1")
                         .executeQuery();
-                totalPlays = res.getInt(1);
+//                totalPlays = res.getInt(1);
                 globalPlays = res.getInt(2);
             } catch (SQLException ex) {
                 ex.printStackTrace();
@@ -311,26 +376,28 @@ public class PlayerInteract implements Listener {
             ArrayList<String[]> info = new ArrayList<>();
             info.add(new String[]{"Creator", "Sigma#8214"});
             info.add(new String[]{"Version", "0.0.1"});
-            info.add(new String[]{"Jukeboxes", String.valueOf(Cornroot.jukeboxes.size())});
+            // info.add(new String[]{"Jukeboxes", String.valueOf(Cornroot.jukeboxes.size())});
+            info.add(new String[]{"------------------", ""});
             info.add(new String[]{"Songs", String.valueOf(Cornroot.songs.size())});
-            if (Cornroot.nowPlaying != null)
-                info.add(new String[]{"Now Playing", Cornroot.songs.get(Cornroot.nowPlaying.songIndex).name});
-            info.add(new String[]{"Total Plays", String.valueOf(totalPlays)});
+            // info.add(new String[]{"Total Plays", String.valueOf(totalPlays)});
             info.add(new String[]{"Global Plays", String.valueOf(globalPlays)});
 
             // Add Info
             inv.setItem(35, Util.cleanItemStack(Material.HEART_OF_THE_SEA, 1, m -> {
-                m.displayName(Component.text("Info", baseStyle.color(TextColor.color(Color.YELLOW.asRGB()))));
+                m.displayName(Component.text("Info", baseStyle.color(TextColor.color(NamedTextColor.YELLOW))));
 
                 ArrayList<Component> components = new ArrayList<>();
-                for (String[] i : info)
-                    components.add(Component.text(String.format("%s: %s", i[0], i[1]), baseStyle));
+                for (String[] i : info) {
+                    if (i[1].isEmpty())
+                        components.add(Component.text(i[0], baseStyle.color(TextColor.color(NamedTextColor.RED))));
+                    else components.add(Component.text(String.format("%s: %s", i[0], i[1]), baseStyle));
+                }
                 m.lore(components);
             }));
 
             // Add queue
             inv.setItem(34, Util.cleanItemStack(Material.ENDER_PEARL, 1, m -> {
-                m.displayName(Component.text("Queue", baseStyle.color(TextColor.color(Color.YELLOW.asRGB()))));
+                m.displayName(Component.text("Queue", baseStyle.color(TextColor.color(NamedTextColor.YELLOW))));
 
                 ArrayList<Component> components = new ArrayList<>();
                 if (Cornroot.nowPlaying != null) components.add(Component.text(
@@ -344,7 +411,7 @@ public class PlayerInteract implements Listener {
                     }
                     components.add(Component.text(
                             String.format("#%d. %s", i + 1, Cornroot.songs.get(Cornroot.queue.get(i).songIndex).name),
-                            baseStyle.color(TextColor.color(Color.SILVER.asRGB()))));
+                            baseStyle));
                 }
                 m.lore(components);
             }));
@@ -375,14 +442,14 @@ public class PlayerInteract implements Listener {
             int finalKeys = keys;
             int finalPlays = plays;
             inv.setItem(27, Util.cleanItemStack(Material.PLAYER_HEAD, 1, m -> {
-                m.displayName(Component.text("User Info", baseStyle.color(TextColor.color(Color.YELLOW.asRGB()))));
+                m.displayName(Component.text("User Info", baseStyle.color(TextColor.color(NamedTextColor.YELLOW))));
                 ((SkullMeta) m).setOwningPlayer(player);
 
                 List<Component> lore = new ArrayList<>();
                 if (Util.bypassKeyCheck(player)) lore.add(Component.text("*Key bypass*", baseStyle));
                 lore.add(Component.text(String.format("Name: %s", player.getName()), baseStyle));
-                lore.add(Component.text(String.format("Keys: %d", finalKeys), baseStyle));
-                lore.add(Component.text(String.format("Plays: %d", finalPlays), baseStyle));
+                lore.add(Component.text(String.format("Your keys: %d", finalKeys), baseStyle));
+                lore.add(Component.text(String.format("Times played: %d", finalPlays), baseStyle));
                 m.lore(lore);
             }));
         }

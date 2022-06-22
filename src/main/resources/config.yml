@@ -6,4 +6,6 @@ jukeboxes:
 baseVolume: 1.0
 
 # Purchase link
-purchaseLink: pvpclub.craftingstore.net
+displayPurchaseLink: pvpclub.craftingstore.net
+fullPurchaseLink: https://pvpclub.craftingstore.net
+

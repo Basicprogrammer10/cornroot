@@ -3,6 +3,9 @@ package com.connorcode.cornroot;
 import com.connorcode.cornroot.events.PlayerInteract;
 import com.connorcode.cornroot.misc.MutInt;
 import com.connorcode.cornroot.misc.QueueItem;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -163,6 +166,15 @@ public class Song {
                 .runTaskAsynchronously(Cornroot.getPlugin(Cornroot.class), () -> {
                     Bukkit.getScheduler()
                             .runTaskAsynchronously(Cornroot.getPlugin(Cornroot.class), () -> {
+                                // Broadcast play
+                                for (Player i : getServer().getOnlinePlayers()) {
+                                    if (PlayerInteract.muteCache.containsKey(
+                                            i.getUniqueId()) && PlayerInteract.muteCache.get(i.getUniqueId())) continue;
+                                    i.sendActionBar(Component.text(String.format("Now Playing: %s",
+                                                    Cornroot.songs.get(Cornroot.nowPlaying.songIndex).name),
+                                            TextColor.color(NamedTextColor.GOLD)));
+                                }
+
                                 // Increment stats
                                 try {
                                     Cornroot.database.connection.prepareStatement(

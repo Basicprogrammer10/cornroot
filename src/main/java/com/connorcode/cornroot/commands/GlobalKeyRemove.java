@@ -13,9 +13,10 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.UUID;
 
-public class GlobalKeyAdd implements CommandExecutor {
+public class GlobalKeyRemove implements CommandExecutor {
+
     @Override
-    public boolean onCommand(CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!sender.isOp()) {
             sender.sendMessage(Component.text("[Cornroot] You are not OP (:o)"));
             return true;
@@ -43,7 +44,7 @@ public class GlobalKeyAdd implements CommandExecutor {
             PreparedStatement stmt = Cornroot.database.connection.prepareStatement(
                     "INSERT OR IGNORE INTO users (uuid, keys, mute, date) VALUES (?1, 0, 0, strftime('%s','now'));");
             PreparedStatement stmt2 = Cornroot.database.connection.prepareStatement(
-                    "UPDATE users SET keys = keys + ?2 WHERE uuid = ?1;");
+                    "UPDATE users SET keys = Max(keys - ?2, 0) WHERE uuid = ?1;");
 
             stmt.setString(1, uuid.toString());
             stmt2.setString(1, uuid.toString());
@@ -55,8 +56,8 @@ public class GlobalKeyAdd implements CommandExecutor {
             e.printStackTrace();
         }
 
-        String resp = "[Cornroot] Added key to player";
-        if (player.getPlayer() != null) resp = String.format("[Cornroot] Added key to player `%s`", player.getName());
+        String resp = "[Cornroot] Removed key from player";
+        if (player.getPlayer() != null) resp = String.format("[Cornroot] Removed key from player `%s`", player.getName());
 
         sender.sendMessage(Component.text(resp));
         return true;
