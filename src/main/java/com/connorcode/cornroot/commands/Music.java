@@ -15,7 +15,7 @@ public class Music implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         Player e = (Player) sender;
-        Inventory inv = getServer().createInventory(null, 18, Component.text("Jukebox"));
+        Inventory inv = getServer().createInventory(null, 36, Component.text("Jukebox"));
         PlayerInteract.JukeboxInventory jukeboxInventory = new PlayerInteract.JukeboxInventory(inv, e);
         jukeboxInventory.updateInventory(0);
         PlayerInteract.inventory.put(e.getUniqueId(), jukeboxInventory);

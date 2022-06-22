@@ -77,5 +77,6 @@ public final class Cornroot extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        Util.saveMuteCache();
     }
 }

@@ -6,13 +6,16 @@ import com.connorcode.cornroot.Song;
 import com.connorcode.cornroot.misc.ItemMetaEditor;
 import com.connorcode.cornroot.misc.QueueItem;
 import com.connorcode.cornroot.misc.Util;
+import net.kyori.adventure.audience.MessageType;
+import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -22,7 +25,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -37,6 +39,10 @@ import static org.bukkit.Bukkit.getServer;
 public class PlayerInteract implements Listener {
     public static HashMap<UUID, JukeboxInventory> inventory = new HashMap<>();
     public static HashMap<UUID, Boolean> muteCache = new HashMap<>();
+    static Style baseStyle = Style.style()
+            .color(TextColor.color(Color.WHITE.asRGB()))
+            .decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE)
+            .build();
     static Material[] musicDisks = new Material[]{Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS, Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD, Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,};
     static NamespacedKey nextKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "next");
     static NamespacedKey idKey = new NamespacedKey(Cornroot.getPlugin(Cornroot.class), "id");
@@ -49,7 +55,7 @@ public class PlayerInteract implements Listener {
         e.setCancelled(true);
 
 
-        Inventory inv = getServer().createInventory(null, 18, Component.text("Jukebox"));
+        Inventory inv = getServer().createInventory(null, 36, Component.text("Jukebox"));
         JukeboxInventory jukeboxInventory = new JukeboxInventory(inv, e.getPlayer());
         jukeboxInventory.updateInventory(0);
         inventory.put(e.getPlayer()
@@ -63,14 +69,14 @@ public class PlayerInteract implements Listener {
         UUID uuid = e.getWhoClicked()
                 .getUniqueId();
         if (e.getAction() == InventoryAction.NOTHING || !inventory.containsKey(
-                uuid) || e.getInventory() != inventory.get(uuid).inv) return;
+                uuid) || e.getClickedInventory() != inventory.get(uuid).inv) return;
         e.setCancelled(true);
 
         JukeboxInventory inv = inventory.get(uuid);
 
         // Process page change
         try {
-            if (inv.pageType == PageType.Home && (e.getSlot() == 14 || e.getSlot() == 12)) {
+            if (inv.pageType == PageType.Home && (e.getSlot() == 32 || e.getSlot() == 30)) {
                 Integer storageContent = Objects.requireNonNull(inv.inv.getStorageContents()[e.getSlot()].getItemMeta()
                         .getPersistentDataContainer()
                         .get(nextKey, PersistentDataType.INTEGER));
@@ -83,13 +89,26 @@ public class PlayerInteract implements Listener {
         }
 
         // Process Toast exit
-        if (inv.pageType == PageType.Toast && e.getSlot() == 17) {
+        if (inv.pageType == PageType.Toast && e.getSlot() == 35) {
             inv.updateInventory(inv.page);
             return;
         }
 
+        // Process toast print
+        if (inv.pageType == PageType.Toast && e.getSlot() == 13) {
+            e.getWhoClicked()
+                    .sendMessage(Identity.nil(), Component.join(Component.text(" "), Component.text("Click =>"),
+                            Component.text(Config.purchaseLink, Style.style()
+                                    .color(TextColor.color(Color.AQUA.asRGB()))
+                                    .decorate(TextDecoration.UNDERLINED)
+                                    .clickEvent(ClickEvent.openUrl(String.format("https://%s", Config.purchaseLink)))
+                                    .build())), MessageType.SYSTEM);
+            inv.inv.close();
+            return;
+        }
+
         // Process mute
-        if (inv.pageType == PageType.Home && e.getSlot() == 10) {
+        if (inv.pageType == PageType.Home && e.getSlot() == 28) {
             inv.mute ^= true;
             muteCache.put(inv.player.getUniqueId(), inv.mute);
             inv.updateInventory(inv.page);
@@ -183,30 +202,37 @@ public class PlayerInteract implements Listener {
             }
         }
 
+        public void clearInventoryBut(int... slot) {
+            for (int i = 0; i < 36; i++) {
+                int finalI = i;
+                if (Arrays.stream(slot)
+                        .anyMatch(d -> d == finalI)) continue;
+                inv.setItem(i, new ItemStack(Material.AIR));
+            }
+        }
+
         public void showInventoryToast(String msg, ItemMetaEditor itemMetaEditor) {
             this.pageType = PageType.Toast;
 
-            inv.setItem(4, Util.cleanItemStack(Material.MAGENTA_STAINED_GLASS_PANE, 1, m -> {
-                m.displayName(Component.text(msg));
+            inv.setItem(13, Util.cleanItemStack(Material.MAGENTA_STAINED_GLASS_PANE, 1, m -> {
+                m.displayName(Component.text(msg, baseStyle));
                 itemMetaEditor.run(m);
             }));
 
-            inv.setItem(17, Util.cleanItemStack(Material.BARRIER, 1, m -> {
-                m.displayName(Component.text("Back"));
-                m.addEnchant(Enchantment.DURABILITY, 1, false);
-                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            }));
+            inv.setItem(35,
+                    Util.cleanItemStack(Material.BARRIER, 1, m -> m.displayName(Component.text("Back", baseStyle))));
 
-            this.clearInventory(0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+            this.clearInventoryBut(13, 35);
         }
 
         public void updateInventory(int page) {
             this.pageType = PageType.Home;
 
             // Add disks for page
-            for (int i = 0; i < 9; i++) {
-                int realIndex = page * 9 + i;
+            for (int i = 0; i < 18; i++) {
+                int realIndex = page * 18 + i;
                 if (realIndex >= Cornroot.songs.size()) {
+                    this.clearInventory(i);
                     continue;
                 }
                 Song song = Cornroot.songs.get(realIndex);
@@ -214,61 +240,56 @@ public class PlayerInteract implements Listener {
                 inv.setItem(i,
                         Util.cleanItemStack(musicDisks[new Random(realIndex).nextInt(musicDisks.length)], 1, m -> {
                             ArrayList<Component> components = new ArrayList<>();
-                            components.add(Component.text(String.format("Artist: %s", song.author),
-                                    TextColor.color(255, 255, 255)));
+                            components.add(Component.text(String.format("Artist: %s", song.author), baseStyle));
                             components.add(
                                     Component.text(String.format("Length: %s", Util.songLength(song.secLength())),
-                                            TextColor.color(255, 255, 255)));
+                                            baseStyle));
                             m.lore(components);
                             m.getPersistentDataContainer()
                                     .set(idKey, PersistentDataType.INTEGER, realIndex);
-                            m.displayName(Component.text(song.name));
+                            m.displayName(
+                                    Component.text(song.name, baseStyle.color(TextColor.color(Color.AQUA.asRGB()))));
                         }));
             }
+
+            // Page break
+            for (int i = 18; i < 27; i++)
+                inv.setItem(i,
+                        Util.cleanItemStack(Material.RED_STAINED_GLASS_PANE, 1, m -> m.displayName(Component.empty())));
+
+            // Add page switchers
+            if (page > 0) inv.setItem(30, Util.cleanItemStack(Material.BOOK, 1, m -> {
+                m.displayName(Component.text("Previous Page", baseStyle));
+                m.getPersistentDataContainer()
+                        .set(nextKey, PersistentDataType.INTEGER, page - 1);
+            }));
+            else this.clearInventory(30);
+
+            if (Cornroot.songs.size() > (page + 1) * 18) inv.setItem(32, Util.cleanItemStack(Material.BOOK, 1, m -> {
+                m.displayName(Component.text("Next Page", baseStyle));
+                m.getPersistentDataContainer()
+                        .set(nextKey, PersistentDataType.INTEGER, page + 1);
+            }));
+            else this.clearInventory(32);
+
+            // Add mute button
+            if (mute) inv.setItem(28, Util.cleanItemStack(Material.RED_WOOL, 1, m -> m.displayName(
+                    Component.text("MUSIC OFF", baseStyle.color(TextColor.color(Color.RED.asRGB()))))));
+            else inv.setItem(28, Util.cleanItemStack(Material.LIME_WOOL, 1, m -> m.displayName(
+                    Component.text("MUSIC ON", baseStyle.color(TextColor.color(Color.LIME.asRGB()))))));
+
+            // Add page number
+            inv.setItem(31, Util.cleanItemStack(Material.BLACK_STAINED_GLASS_PANE, 1, m -> m.displayName(
+                    Component.text(String.format("%d/%d", page + 1, Cornroot.songs.size() / 18 + 1), baseStyle))));
 
             // Update queue and info
             this.updateQueueInfo();
 
-            // Add page switchers
-            inv.setItem(12, Util.cleanItemStack(Material.EMERALD, 1, m -> {
-                m.displayName(Component.text("Previous Page"));
-                if (page <= 0) return;
-                m.getPersistentDataContainer()
-                        .set(nextKey, PersistentDataType.INTEGER, page - 1);
-                m.addEnchant(Enchantment.DURABILITY, 1, false);
-                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            }));
-
-            inv.setItem(14, Util.cleanItemStack(Material.EMERALD, 1, m -> {
-                m.displayName(Component.text("Next Page"));
-                if (Cornroot.songs.size() <= (page + 1) * 9) return;
-                m.getPersistentDataContainer()
-                        .set(nextKey, PersistentDataType.INTEGER, page + 1);
-                m.addEnchant(Enchantment.DURABILITY, 1, false);
-                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            }));
-
             // Add user info
             this.updateUserInfo();
 
-            // Add mute button
-            if (mute) inv.setItem(10, Util.cleanItemStack(Material.BARRIER, 1, m -> {
-                m.displayName(Component.text("Unmute"));
-                m.addEnchant(Enchantment.DURABILITY, 1, false);
-                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            }));
-            else inv.setItem(10, Util.cleanItemStack(Material.JUNGLE_SIGN, 1, m -> {
-                m.displayName(Component.text("Mute"));
-                m.addEnchant(Enchantment.DURABILITY, 1, false);
-                m.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            }));
-
-            // Add page number
-            inv.setItem(13, Util.cleanItemStack(Material.GRAY_STAINED_GLASS_PANE, 1, m -> m.displayName(
-                    Component.text(String.format("%d/%d", page + 1, Cornroot.songs.size() / 9 + 1)))));
-
             // Clear Inventory
-            this.clearInventory(11, 15);
+            this.clearInventory(29, 33);
         }
 
         public void updateQueueInfo() {
@@ -291,39 +312,39 @@ public class PlayerInteract implements Listener {
             info.add(new String[]{"Creator", "Sigma#8214"});
             info.add(new String[]{"Version", "0.0.1"});
             info.add(new String[]{"Jukeboxes", String.valueOf(Cornroot.jukeboxes.size())});
+            info.add(new String[]{"Songs", String.valueOf(Cornroot.songs.size())});
             if (Cornroot.nowPlaying != null)
                 info.add(new String[]{"Now Playing", Cornroot.songs.get(Cornroot.nowPlaying.songIndex).name});
             info.add(new String[]{"Total Plays", String.valueOf(totalPlays)});
             info.add(new String[]{"Global Plays", String.valueOf(globalPlays)});
 
             // Add Info
-            inv.setItem(17, Util.cleanItemStack(Material.HEART_OF_THE_SEA, 1, m -> {
-                m.displayName(Component.text("Info"));
+            inv.setItem(35, Util.cleanItemStack(Material.HEART_OF_THE_SEA, 1, m -> {
+                m.displayName(Component.text("Info", baseStyle.color(TextColor.color(Color.YELLOW.asRGB()))));
 
                 ArrayList<Component> components = new ArrayList<>();
                 for (String[] i : info)
-                    components.add(Component.text(String.format("%s: %s", i[0], i[1]), TextColor.color(255, 255, 255)));
+                    components.add(Component.text(String.format("%s: %s", i[0], i[1]), baseStyle));
                 m.lore(components);
             }));
 
             // Add queue
-            inv.setItem(16, Util.cleanItemStack(Material.ENDER_PEARL, 1, m -> {
-                m.displayName(Component.text("Queue"));
+            inv.setItem(34, Util.cleanItemStack(Material.ENDER_PEARL, 1, m -> {
+                m.displayName(Component.text("Queue", baseStyle.color(TextColor.color(Color.YELLOW.asRGB()))));
 
                 ArrayList<Component> components = new ArrayList<>();
                 if (Cornroot.nowPlaying != null) components.add(Component.text(
                         String.format("Now Playing: %s", Cornroot.songs.get(Cornroot.nowPlaying.songIndex).name),
-                        TextColor.color(255, 255, 255)));
+                        baseStyle));
 
                 for (int i = 0; i < Cornroot.queue.size(); i++) {
                     if (i > 9) {
-                        components.add(Component.text(String.format("%d more", Cornroot.queue.size() - 10),
-                                TextColor.color(255, 255, 255)));
+                        components.add(Component.text(String.format("%d more", Cornroot.queue.size() - 10), baseStyle));
                         break;
                     }
                     components.add(Component.text(
                             String.format("#%d. %s", i + 1, Cornroot.songs.get(Cornroot.queue.get(i).songIndex).name),
-                            TextColor.color(255, 255, 255)));
+                            baseStyle.color(TextColor.color(Color.SILVER.asRGB()))));
                 }
                 m.lore(components);
             }));
@@ -353,16 +374,15 @@ public class PlayerInteract implements Listener {
 
             int finalKeys = keys;
             int finalPlays = plays;
-            inv.setItem(9, Util.cleanItemStack(Material.PLAYER_HEAD, 1, m -> {
-                m.displayName(Component.text("User Info"));
+            inv.setItem(27, Util.cleanItemStack(Material.PLAYER_HEAD, 1, m -> {
+                m.displayName(Component.text("User Info", baseStyle.color(TextColor.color(Color.YELLOW.asRGB()))));
                 ((SkullMeta) m).setOwningPlayer(player);
 
                 List<Component> lore = new ArrayList<>();
-                if (Util.bypassKeyCheck(player))
-                    lore.add(Component.text("*Key bypass*", TextColor.color(255, 255, 255)));
-                lore.add(Component.text(String.format("Name: %s", player.getName()), TextColor.color(255, 255, 255)));
-                lore.add(Component.text(String.format("Keys: %d", finalKeys), TextColor.color(255, 255, 255)));
-                lore.add(Component.text(String.format("Plays: %d", finalPlays), TextColor.color(255, 255, 255)));
+                if (Util.bypassKeyCheck(player)) lore.add(Component.text("*Key bypass*", baseStyle));
+                lore.add(Component.text(String.format("Name: %s", player.getName()), baseStyle));
+                lore.add(Component.text(String.format("Keys: %d", finalKeys), baseStyle));
+                lore.add(Component.text(String.format("Plays: %d", finalPlays), baseStyle));
                 m.lore(lore);
             }));
         }
