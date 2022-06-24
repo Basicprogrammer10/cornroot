@@ -11,15 +11,22 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Scanner;
 import java.util.logging.Level;
 
 public final class Cornroot extends JavaPlugin {
     public static final List<Location> jukeboxes = new ArrayList<>();
     public static final List<Song> songs = new ArrayList<>();
     public static final List<QueueItem> queue = new ArrayList<>();
+    public static final String version = "1.0.0";
     public static Database database;
     public static QueueItem nowPlaying = null;
     final File configFile = new File(getDataFolder() + File.separator + "config.yml");
@@ -73,6 +80,30 @@ public final class Cornroot extends JavaPlugin {
                 .setTabCompleter(new GlobalKeyCompletor());
         Objects.requireNonNull(getServer().getPluginCommand("globalkeyremove"))
                 .setTabCompleter(new GlobalKeyCompletor());
+
+        // Version check
+        try {
+            checkVersion();
+        } catch (IOException ignore) {
+        }
+    }
+
+    void checkVersion() throws IOException {
+        URL url = new URL("https://version.connorcode.com/cornroot/status?code=yVFq6y88wDa3Ye5Rn3Pc");
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestProperty("accept", "text/plain");
+        InputStream responseStream = connection.getInputStream();
+
+        Scanner scanner = new Scanner(responseStream, StandardCharsets.UTF_8.name());
+        String version = scanner.useDelimiter("\\A")
+                .next()
+                .split(",")[0];
+
+        if (version.equals(Cornroot.version)) return;
+        getLogger().log(Level.WARNING, String.format("Version Outdated! (%s > %s)", version, Cornroot.version));
+        getLogger().log(Level.WARNING, String.format(
+                "Download new version at https://version.connorcode.com/cornroot/file/%s?code=yVFq6y88wDa3Ye5Rn3Pc",
+                version));
     }
 
     @Override
